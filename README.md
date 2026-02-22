@@ -1,4 +1,4 @@
-# Cipher Chat Backend
+# Cipher Chat Server
 
 Real-time chat server API with end-to-end encryption support, file sharing, and cluster-based group chats. Built with Node.js, Express, Socket.io, and MongoDB.
 
@@ -12,7 +12,7 @@ Real-time chat server API with end-to-end encryption support, file sharing, and 
 - **File Sharing** - Image and file uploads (up to 100MB)
 - **Message Features** - Edit, delete, reactions, reply to messages
 - **Read Receipts** - Track message read status
-- **Typing Indicators** - Real-time typing notifications
+
 - **User Status** - Online/offline/away/DND status
 - **Block Users** - Block/unblock other users
 - **Disappearing Messages** - Auto-delete after timer expires
@@ -42,12 +42,12 @@ Real-time chat server API with end-to-end encryption support, file sharing, and 
 1. Clone the repository
 ```bash
 # SSH
-git clone git@github.com:SalvM/cipher-chat-backend.git
+git clone git@github.com:SalvM/cipher-chat-server.git
 
 # HTTPS
-git clone https://github.com/SalvM/cipher-chat-backend.git
+git clone https://github.com/SalvM/cipher-chat-server.git
 
-cd cipher-chat-backend
+cd cipher-chat-server
 ```
 
 2. Install dependencies
@@ -79,7 +79,7 @@ npm start
 ## 📁 Project Structure
 
 ```
-cipher-chat-backend/
+cipher-chat-server/
 ├── server.js              # Main application entry
 ├── package.json           # Dependencies
 ├── .env                   # Environment variables
@@ -359,9 +359,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Salvatore** - [@salvm](https://github.com/SalvM)
+- **Salvatore** - [@SalvM](https://github.com/SalvM)
 - **Email**: salvatore.manna@protonmail.com
-- **Project Link**: [https://github.com/SalvM/cipher-chat-backend](https://github.com/SalvM/cipher-chat-backend)
+- **Project Link**: [https://github.com/SalvM/cipher-chat-server](https://github.com/SalvM/cipher-chat-server)
 
 ## ☕ Support
 
