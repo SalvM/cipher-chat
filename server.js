@@ -16,6 +16,7 @@ import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import bip39 from 'bip39';
 import expressRateLimit from 'express-rate-limit';
+import cors from 'cors'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -150,17 +151,25 @@ const authLimiter = expressRateLimit({
 });
 
 // ===================== Middleware =====================
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
+    
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Origin not allowed:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGINS?.split(',')[0] || '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
 
 // Rate limiting middleware
 app.use(async (req, res, next) => {
@@ -282,6 +291,7 @@ class ConnectionManager {
   }
 
   async connect(socket, userId) {
+    console.log('Connection - socket.userId:', socket.userId);
     this.activeConnections.set(userId, socket);
     this.userStatus.set(userId, 'online');
     await this.broadcastStatus(userId, 'online');
@@ -295,8 +305,11 @@ class ConnectionManager {
 
   async sendPersonalMessage(userId, message) {
     const socket = this.activeConnections.get(userId);
+
     if (socket) {
       socket.emit('message', message);
+    } else {
+      console.error(`Socket not found for user ${userId}`)
     }
   }
 
@@ -695,7 +708,7 @@ router.put('/chats/:chat_id/settings', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Chat not found' });
     }
     
-    const validTimers = [0, 30, 60, 1440, 10080];
+    const validTimers = [0, 5, 30, 60, 1440, 10080];
     if (disappearing_timer !== undefined && !validTimers.includes(disappearing_timer)) {
       return res.status(400).json({ error: 'Invalid timer value' });
     }
@@ -972,7 +985,15 @@ router.post('/messages/:message_id/reactions', authenticate, async (req, res) =>
       { id: message.id },
       { $addToSet: { [`reactions.${emoji}`]: req.user.id } }
     );
-    
+    console.log('Emitting reaction event:', {
+      type: 'message_reaction',
+      message_id: message.id,
+      emoji,
+      user_id: req.user.id,
+      action: 'add',
+      chat_id: message.chat_id,
+      participants: chat.participants
+    });
     await manager.broadcastToChat(message.chat_id, {
       type: 'message_reaction',
       message_id: message.id,
@@ -980,7 +1001,7 @@ router.post('/messages/:message_id/reactions', authenticate, async (req, res) =>
       user_id: req.user.id,
       action: 'add'
     }, chat.participants);
-    
+
     res.json({ success: true, emoji });
   } catch (err) {
     console.error(err);
@@ -1323,7 +1344,7 @@ router.get('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, asyn
 
 router.post('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content } = req.query;
     
     const cluster = await Cluster.findOne({
       id: req.params.cluster_id,
@@ -1408,6 +1429,7 @@ io.use((socket, next) => {
   try {
     const payload = verifyToken(token);
     socket.userId = payload.user_id;
+    console.log('Socket assigned userId:', socket.userId);
     next();
   } catch (err) {
     next(new Error('Authentication error'));
