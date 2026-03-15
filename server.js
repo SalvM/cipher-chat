@@ -527,10 +527,10 @@ router.put('/auth/status', authenticate, async (req, res) => {
 // User Routes
 router.get('/users/search', authenticate, async (req, res) => {
   try {
-    const { username } = req.query;
+    const { q } = req.query;
     
     const user = await User.findOne(
-      { username_lower: username.toLowerCase() },
+      { username_lower: q.toLowerCase() },
       '-password_hash -recovery_hash'
     ).lean();
     
@@ -1344,8 +1344,9 @@ router.get('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, asyn
 
 router.post('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, async (req, res) => {
   try {
-    const { content } = req.query;
-    
+    const { content } = req.body;
+    if (content === undefined || content.length === 0) return res.status(501); 
+
     const cluster = await Cluster.findOne({
       id: req.params.cluster_id,
       members: req.user.id
