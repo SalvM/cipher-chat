@@ -146,7 +146,7 @@ const rateLimiter = new RateLimiterMemory({
 
 const authLimiter = expressRateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 55, // 55 in DEV, 5 in PROD
   message: 'Too many attempts, try again later'
 });
 
@@ -291,7 +291,7 @@ class ConnectionManager {
   }
 
   async connect(socket, userId) {
-    console.log('Connection - socket.userId:', socket.userId);
+    console.log('>> Connection - userId:', userId);
     this.activeConnections.set(userId, socket);
     this.userStatus.set(userId, 'online');
     await this.broadcastStatus(userId, 'online');
@@ -303,19 +303,21 @@ class ConnectionManager {
     this.broadcastStatus(userId, 'offline');
   }
 
-  async sendPersonalMessage(userId, message) {
+  async sendPersonalMessage(userId, eventType, eventContent) {
+    console.log('[sendPersonalMessage() ...', userId, eventType, eventContent)
     const socket = this.activeConnections.get(userId);
 
     if (socket) {
-      socket.emit('message', message);
+      socket.emit(eventType, eventContent);
     } else {
       console.error(`Socket not found for user ${userId}`)
     }
   }
 
-  async broadcastToChat(chatId, message, participants) {
+  async broadcastToChat(eventType, eventContent, participants) {
+    // console.log('broadcastToChat()', { eventType, eventContent, participants })
     for (const userId of participants) {
-      await this.sendPersonalMessage(userId, message);
+      await this.sendPersonalMessage(userId, eventType, eventContent);
     }
   }
 
@@ -326,10 +328,9 @@ class ConnectionManager {
     for (const chat of chats) {
       for (const participant of chat.participants) {
         if (participant !== userId && !notified.has(participant)) {
-          await this.sendPersonalMessage(participant, {
-            type: 'status_update',
-            user_id: userId,
-            status
+          await this.sendPersonalMessage(participant, 'status_update', {
+              user_id: userId,
+              status
           });
           notified.add(participant);
         }
@@ -342,8 +343,7 @@ class ConnectionManager {
     if (chat) {
       for (const participant of chat.participants) {
         if (participant !== userId) {
-          await this.sendPersonalMessage(participant, {
-            type: 'typing',
+          await this.sendPersonalMessage(participant, 'typing', {
             user_id: userId,
             chat_id: chatId,
             is_typing: isTyping
@@ -721,12 +721,15 @@ router.put('/chats/:chat_id/settings', authenticate, async (req, res) => {
     if (Object.keys(updateData).length > 0) {
       await Chat.updateOne({ id: chat.id }, { $set: updateData });
       
-      await manager.broadcastToChat(chat.id, {
-        type: 'chat_settings_updated',
-        chat_id: chat.id,
-        settings: updateData,
-        updated_by: req.user.id
-      }, chat.participants);
+      await manager.broadcastToChat(
+        'chat_settings_updated',
+        {
+          chat_id: chat.id,
+          settings: updateData,
+          updated_by: req.user.id
+        },
+        chat.participants
+      );
     }
     
     const updated = await Chat.findOne({ id: chat.id }).lean();
@@ -865,11 +868,12 @@ router.post('/messages', authenticate, async (req, res) => {
     
     const messageObj = message.toObject();
     delete messageObj._id;
-    
-    await manager.broadcastToChat(chat_id, {
-      type: 'new_message',
-      message: messageObj
-    }, chat.participants);
+
+    await manager.broadcastToChat(
+      'new_message',
+      messageObj,
+      chat.participants
+    );
     
     res.json(messageObj);
   } catch (err) {
@@ -904,12 +908,15 @@ router.put('/messages/:message_id', authenticate, async (req, res) => {
     
     const chat = await Chat.findOne({ id: message.chat_id }).lean();
     if (chat) {
-      await manager.broadcastToChat(chat.id, {
-        type: 'message_edited',
-        message_id: message.id,
-        content,
-        edited_at: new Date()
-      }, chat.participants);
+      await manager.broadcastToChat(
+        'message_edited',
+        {
+          message_id: message.id,
+          content,
+          edited_at: new Date()
+        },
+        chat.participants
+      )
     }
     
     res.json({
@@ -948,11 +955,14 @@ router.delete('/messages/:message_id', authenticate, async (req, res) => {
     
     const chat = await Chat.findOne({ id: message.chat_id }).lean();
     if (chat) {
-      await manager.broadcastToChat(chat.id, {
-        type: 'message_deleted',
-        message_id: message.id,
-        chat_id: message.chat_id
-      }, chat.participants);
+      await manager.broadcastToChat(
+        'message_deleted',
+        {
+          message_id: message.id,
+          chat_id: message.chat_id
+        },
+        chat.participants
+      );
     }
     
     res.json({ deleted: true });
@@ -985,22 +995,17 @@ router.post('/messages/:message_id/reactions', authenticate, async (req, res) =>
       { id: message.id },
       { $addToSet: { [`reactions.${emoji}`]: req.user.id } }
     );
-    console.log('Emitting reaction event:', {
-      type: 'message_reaction',
-      message_id: message.id,
-      emoji,
-      user_id: req.user.id,
-      action: 'add',
-      chat_id: message.chat_id,
-      participants: chat.participants
-    });
-    await manager.broadcastToChat(message.chat_id, {
-      type: 'message_reaction',
-      message_id: message.id,
-      emoji,
-      user_id: req.user.id,
-      action: 'add'
-    }, chat.participants);
+ 
+    await manager.broadcastToChat(
+      'message_reaction',
+      {
+        message_id: message.id,
+        emoji,
+        user_id: req.user.id,
+        action: 'add'
+      },
+      chat.participants
+    );
 
     res.json({ success: true, emoji });
   } catch (err) {
@@ -1032,13 +1037,16 @@ router.delete('/messages/:message_id/reactions/:emoji', authenticate, async (req
       { $pull: { [`reactions.${emoji}`]: req.user.id } }
     );
     
-    await manager.broadcastToChat(message.chat_id, {
-      type: 'message_reaction',
-      message_id: message.id,
-      emoji,
-      user_id: req.user.id,
-      action: 'remove'
-    }, chat.participants);
+    await manager.broadcastToChat(
+      'message_reaction',
+      {
+        message_id: message.id,
+        emoji,
+        user_id: req.user.id,
+        action: 'remove'
+      },
+      chat.participants
+    );
     
     res.json({ success: true });
   } catch (err) {
@@ -1071,8 +1079,7 @@ router.post('/messages/read', authenticate, async (req, res) => {
     
     for (const msg of messages) {
       if (msg.sender_id !== req.user.id) {
-        await manager.sendPersonalMessage(msg.sender_id, {
-          type: 'message_read',
+        await manager.sendPersonalMessage(msg.sender_id, 'message_read', {
           message_id: msg.id,
           chat_id: msg.chat_id,
           read_by: req.user.id
@@ -1183,10 +1190,11 @@ router.post('/messages/with-attachment', authenticate, upload.single('file'), as
     const messageObj = message.toObject();
     delete messageObj._id;
     
-    await manager.broadcastToChat(chat_id, {
-      type: 'new_message',
-      message: messageObj
-    }, chat.participants);
+    await manager.broadcastToChat(
+      'new_message',
+      messageObj,
+      chat.participants
+    );
     
     res.json(messageObj);
   } catch (err) {
@@ -1377,8 +1385,7 @@ router.post('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, asy
     delete messageObj._id;
     
     for (const memberId of cluster.members) {
-      await manager.sendPersonalMessage(memberId, {
-        type: 'new_cluster_message',
+      await manager.sendPersonalMessage(memberId, 'new_cluster_message', {
         message: messageObj
       });
     }
