@@ -18,6 +18,8 @@ import bip39 from 'bip39';
 import expressRateLimit from 'express-rate-limit';
 import cors from 'cors'
 
+import SocketEvents from './socketEvents.js'
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -123,6 +125,13 @@ const clusterMessageSchema = new mongoose.Schema({
   cluster_id: { type: String, ref: 'Cluster', index: true },
   topic_id: String,
   created_at: { type: Date, default: Date.now, index: true }
+});
+
+const invitationSchema = new mongoose.Schema({
+  id: { type: String, default: uuidv4, unique: true, index: true },
+  cluster_id: { type: String, ref: 'Cluster' },
+  created_at: { type: Date, default: Date.now },
+  expires_at: { type: Date, default: Date.now }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -304,7 +313,7 @@ class ConnectionManager {
   }
 
   async sendPersonalMessage(userId, eventType, eventContent) {
-    console.log('[sendPersonalMessage() ...', userId, eventType, eventContent)
+    console.log('<<', userId, eventType, eventContent)
     const socket = this.activeConnections.get(userId);
 
     if (socket) {
@@ -328,7 +337,7 @@ class ConnectionManager {
     for (const chat of chats) {
       for (const participant of chat.participants) {
         if (participant !== userId && !notified.has(participant)) {
-          await this.sendPersonalMessage(participant, 'status_update', {
+          await this.sendPersonalMessage(participant, SocketEvents.STATUS_UPDATE, {
               user_id: userId,
               status
           });
@@ -343,7 +352,7 @@ class ConnectionManager {
     if (chat) {
       for (const participant of chat.participants) {
         if (participant !== userId) {
-          await this.sendPersonalMessage(participant, 'typing', {
+          await this.sendPersonalMessage(participant, SocketEvents.USER_TYPING, {
             user_id: userId,
             chat_id: chatId,
             is_typing: isTyping
@@ -722,7 +731,7 @@ router.put('/chats/:chat_id/settings', authenticate, async (req, res) => {
       await Chat.updateOne({ id: chat.id }, { $set: updateData });
       
       await manager.broadcastToChat(
-        'chat_settings_updated',
+        SocketEvents.CHAT_SETTINGS_UPDATED,
         {
           chat_id: chat.id,
           settings: updateData,
@@ -870,7 +879,7 @@ router.post('/messages', authenticate, async (req, res) => {
     delete messageObj._id;
 
     await manager.broadcastToChat(
-      'new_message',
+      SocketEvents.NEW_MESSAGE,
       messageObj,
       chat.participants
     );
@@ -909,7 +918,7 @@ router.put('/messages/:message_id', authenticate, async (req, res) => {
     const chat = await Chat.findOne({ id: message.chat_id }).lean();
     if (chat) {
       await manager.broadcastToChat(
-        'message_edited',
+        SocketEvents.MESSAGE_EDITED,
         {
           message_id: message.id,
           content,
@@ -956,7 +965,7 @@ router.delete('/messages/:message_id', authenticate, async (req, res) => {
     const chat = await Chat.findOne({ id: message.chat_id }).lean();
     if (chat) {
       await manager.broadcastToChat(
-        'message_deleted',
+        SocketEvents.MESSAGE_DELETED,
         {
           message_id: message.id,
           chat_id: message.chat_id
@@ -997,7 +1006,7 @@ router.post('/messages/:message_id/reactions', authenticate, async (req, res) =>
     );
  
     await manager.broadcastToChat(
-      'message_reaction',
+      SocketEvents.MESSAGE_REACTION,
       {
         message_id: message.id,
         emoji,
@@ -1038,7 +1047,7 @@ router.delete('/messages/:message_id/reactions/:emoji', authenticate, async (req
     );
     
     await manager.broadcastToChat(
-      'message_reaction',
+      SocketEvents.MESSAGE_REACTION,
       {
         message_id: message.id,
         emoji,
@@ -1079,7 +1088,7 @@ router.post('/messages/read', authenticate, async (req, res) => {
     
     for (const msg of messages) {
       if (msg.sender_id !== req.user.id) {
-        await manager.sendPersonalMessage(msg.sender_id, 'message_read', {
+        await manager.sendPersonalMessage(msg.sender_id, SocketEvents.MESSAGE_READ, {
           message_id: msg.id,
           chat_id: msg.chat_id,
           read_by: req.user.id
@@ -1191,7 +1200,7 @@ router.post('/messages/with-attachment', authenticate, upload.single('file'), as
     delete messageObj._id;
     
     await manager.broadcastToChat(
-      'new_message',
+      SocketEvents.NEW_MESSAGE,
       messageObj,
       chat.participants
     );
@@ -1385,7 +1394,7 @@ router.post('/clusters/:cluster_id/topics/:topic_id/messages', authenticate, asy
     delete messageObj._id;
     
     for (const memberId of cluster.members) {
-      await manager.sendPersonalMessage(memberId, 'new_cluster_message', {
+      await manager.sendPersonalMessage(memberId, SocketEvents.NEW_CLUSTER_MESSAGE, {
         message: messageObj
       });
     }
@@ -1450,6 +1459,7 @@ io.on('connection', (socket) => {
   manager.connect(socket, userId);
   
   socket.on('message', async (data) => {
+    console.log('>>', data.type, userId)
     if (data.type === 'typing') {
       await manager.broadcastTyping(userId, data.chat_id, data.is_typing);
     } else if (data.type === 'status') {
@@ -1459,7 +1469,11 @@ io.on('connection', (socket) => {
       }
     }
   });
-  
+
+  socket.on(SocketEvents.USER_TYPING, async (data) => {
+    await manager.broadcastTyping(userId, data.chatId, data.isTyping);
+  })
+
   socket.on('disconnect', () => {
     manager.disconnect(userId);
     User.updateOne({ id: userId }, { $set: { status: 'offline' } }).catch(console.error);
