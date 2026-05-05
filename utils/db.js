@@ -11,7 +11,7 @@ const User = mongoose.model('User', userSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Cluster = mongoose.model('Cluster', clusterSchema);
-const ClusterMessage = mongoose.model('ClusterMessage', clusterSchema);
+const ClusterMessage = mongoose.model('ClusterMessage', clusterMessageSchema);
 const Invitation = mongoose.model('Invitation', invitationSchema);
 
 // Create indexes

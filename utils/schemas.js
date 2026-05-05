@@ -75,7 +75,20 @@ const clusterMessageSchema = new mongoose.Schema({
   sender_avatar: String,
   cluster_id: { type: String, ref: 'Cluster', index: true },
   topic_id: String,
-  created_at: { type: Date, default: Date.now, index: true }
+  created_at: { type: Date, default: Date.now, index: true },
+  edited: { type: Boolean, default: false },
+  edited_at: Date,
+  reply_to: String,
+  reply_to_content: String,
+  reactions: { type: Map, of: [String], default: {} },
+    attachments: [{
+    file_id: String,
+    original_name: String,
+    content_type: String,
+    size: Number,
+    is_image: Boolean,
+    uploaded_at: Date
+  }],
 });
 
 const invitationSchema = new mongoose.Schema({

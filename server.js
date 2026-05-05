@@ -32,6 +32,7 @@ await import('./utils/db.js');
 import AuthRoutes from './routes/authRoutes.js'
 import ChatsRoutes from './routes/chatsRoutes.js'
 import ClustersRoutes from './routes/clustersRoutes.js'
+import InvitationRoutes from './routes/invitationsRoutes.js'
 import MessagesRoutes from './routes/messagesRoutes.js'
 import UsersRoutes from './routes/usersRoutes.js'
 import { rateLimiter } from './utils/limiters.js';
@@ -78,6 +79,7 @@ const router = express.Router();
 router.use('/auth', AuthRoutes)
 router.use('/chats', ChatsRoutes)
 router.use('/clusters', ClustersRoutes)
+router.use('/invitations', InvitationRoutes)
 router.use('/messages', MessagesRoutes)
 router.use('/users', UsersRoutes)
 

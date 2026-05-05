@@ -172,36 +172,10 @@ router.post('/:cluster_id/topics/:topic_id/messages', authenticate, async (req, 
     
     const messageObj = message.toObject();
     delete messageObj._id;
-    
-    for (const memberId of cluster.members) {
-      await websocketManager.sendPersonalMessage(memberId, SocketEvents.NEW_CLUSTER_MESSAGE, {
-        message: messageObj
-      });
-    }
-    
-    res.json(messageObj);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
-router.post('/:cluster_id/join', authenticate, async (req, res) => {
-  try {
-    const cluster = await Cluster.findOne({ id: req.params.cluster_id });
+    websocketManager.broadcastToChat(SocketEvents.CLUSTER_MESSAGE, messageObj, cluster.members)
     
-    if (!cluster) {
-      return res.status(404).json({ error: 'Cluster not found' });
-    }
-    
-    if (cluster.members.includes(req.user.id)) {
-      return res.json({ message: 'Already a member' });
-    }
-    
-    cluster.members.push(req.user.id);
-    await cluster.save();
-    
-    res.json({ message: 'Joined cluster successfully' });
+    res.json();
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
