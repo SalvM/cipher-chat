@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { join } from 'path';
 import express from "express";
-import { Chat, User, Message } from "../utils/db.js";
+import { User, Cluster, ClusterMessage } from "../utils/db.js";
 
 import SocketEvents from "../socketEvents.js";
 import websocketManager from '../websocket.js'
@@ -13,59 +13,51 @@ const router = express.Router();
 
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { content, chat_id, reply_to } = req.body;
+    const { content, cluster_id, topic_id, reply_to } = req.body;
     if (content === undefined || content.length === 0) return res.status(501); 
 
-    const chat = await Chat.findOne({
-      id: chat_id,
-      participants: { $in: [req.user.id] }
+    const cluster = await Cluster.findOne({
+      id: cluster_id,
+      members: { $in: [req.user.id] }
     }).lean();
     
-    if (!chat) {
-      return res.status(404).json({ error: 'Chat not found' });
+    if (!cluster) {
+      return res.status(404).json({ error: 'Cluster not found' });
     }
-    
-    const otherId = chat.participants.find(p => p !== req.user.id);
-    const otherUser = await User.findOne({ id: otherId }).lean();
-    
-    if (otherUser?.blocked_users?.includes(req.user.id)) {
-      return res.status(403).json({ error: 'Cannot send message to this user' });
+    const topicExists = cluster.topics.some(t => t.id === topic_id);
+    if (!topicExists) {
+      return res.status(404).json({ error: 'Topic not found' });
     }
     
     let replyToContent = null;
     if (reply_to) {
-      const replyMsg = await Message.findOne({ id: reply_to }).lean();
+      const replyMsg = await ClusterMessage.findOne({ id: reply_to }).lean();
       if (replyMsg) {
         replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, 100)}`;
       }
     }
     
-    let expiresAt = null;
-    if (chat.disappearing_timer) {
-      expiresAt = new Date(Date.now() + chat.disappearing_timer * 60000);
-    }
-    
-    const message = new Message({
+    const clusterMessage = new ClusterMessage({
       content,
       sender_id: req.user.id,
       sender_username: req.user.username,
       sender_display_name: req.user.display_name,
       sender_avatar: req.user.avatar,
-      chat_id,
+      cluster_id,
+      topic_id,
       reply_to,
       reply_to_content: replyToContent,
-      expires_at: expiresAt
     });
     
-    await message.save();
+    await clusterMessage.save();
     
-    const messageObj = message.toObject();
+    const messageObj = clusterMessage.toObject();
     delete messageObj._id;
 
     await websocketManager.broadcastToChat(
-      SocketEvents.NEW_MESSAGE,
+      SocketEvents.CLUSTER_MESSAGE,
       messageObj,
-      chat.participants
+      cluster.members
     );
     
     res.json(messageObj);
@@ -79,7 +71,7 @@ router.put('/:message_id', authenticate, async (req, res) => {
   try {
     const { content } = req.body;
     
-    const message = await Message.findOne({
+    const message = await ClusterMessage.findOne({
       id: req.params.message_id,
       sender_id: req.user.id
     }).lean();
@@ -88,7 +80,7 @@ router.put('/:message_id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
     
-    await Message.updateOne(
+    await ClusterMessage.updateOne(
       { id: message.id },
       {
         $set: {
@@ -99,16 +91,16 @@ router.put('/:message_id', authenticate, async (req, res) => {
       }
     );
     
-    const chat = await Chat.findOne({ id: message.chat_id }).lean();
-    if (chat) {
+    const cluster = await Cluster.findOne({ id: message.cluster_id }).lean();
+    if (cluster) {
       await websocketManager.broadcastToChat(
-        SocketEvents.MESSAGE_EDITED,
+        SocketEvents.CLUSTER_MESSAGE_EDITED,
         {
           id: message.id,
           content,
           edited_at: new Date()
         },
-        chat.participants
+        cluster.members
       )
     }
     
@@ -118,14 +110,14 @@ router.put('/:message_id', authenticate, async (req, res) => {
       edited: true
     });
   } catch (err) {
-    console.error(err);
+    console.error(`Error processing message update for ${req.params.message_id}:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 router.delete('/:message_id', authenticate, async (req, res) => {
   try {
-    const message = await Message.findOne({
+    const message = await ClusterMessage.findOne({
       id: req.params.message_id,
       sender_id: req.user.id
     }).lean();
@@ -144,17 +136,17 @@ router.delete('/:message_id', authenticate, async (req, res) => {
       }
     }
     
-    await Message.deleteOne({ id: message.id });
+    await ClusterMessage.deleteOne({ id: message.id });
     
-    const chat = await Chat.findOne({ id: message.chat_id }).lean();
-    if (chat) {
+    const cluster = await Cluster.findOne({ id: message.cluster_id }).lean();
+    if (cluster) {
       await websocketManager.broadcastToChat(
-        SocketEvents.MESSAGE_DELETED,
+        SocketEvents.CLUSTER_MESSAGE_DELETED,
         {
           id: message.id,
-          chat_id: message.chat_id
+          cluster_id: message.cluster_id
         },
-        chat.participants
+        cluster.members
       );
     }
     
@@ -165,39 +157,39 @@ router.delete('/:message_id', authenticate, async (req, res) => {
   }
 });
 
-// Message Reactions
+// ClusterMessage Reactions
 router.post('/:message_id/reactions', authenticate, async (req, res) => {
   try {
     const { emoji } = req.body;
     
-    const message = await Message.findOne({ id: req.params.message_id }).lean();
+    const message = await ClusterMessage.findOne({ id: req.params.message_id }).lean();
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
     
-    const chat = await Chat.findOne({
-      id: message.chat_id,
-      participants: { $in: [req.user.id] }
+    const cluster = await Cluster.findOne({
+      id: message.cluster_id,
+      members: { $in: req.user.id }
     }).lean();
     
-    if (!chat) {
+    if (!cluster) {
       return res.status(403).json({ error: 'Not authorized' });
     }
     
-    await Message.updateOne(
+    await ClusterMessage.updateOne(
       { id: message.id },
       { $addToSet: { [`reactions.${emoji}`]: req.user.id } }
     );
  
     await websocketManager.broadcastToChat(
-      SocketEvents.MESSAGE_REACTION,
+      SocketEvents.CLUSTER_MESSAGE_REACTION,
       {
         message_id: message.id,
         emoji,
         user_id: req.user.id,
         action: 'add'
       },
-      chat.participants
+      cluster.members
     );
 
     res.json({ success: true, emoji });
@@ -211,34 +203,34 @@ router.delete('/:message_id/reactions/:emoji', authenticate, async (req, res) =>
   try {
     const { emoji } = req.params;
     
-    const message = await Message.findOne({ id: req.params.message_id }).lean();
+    const message = await ClusterMessage.findOne({ id: req.params.message_id }).lean();
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
     
-    const chat = await Chat.findOne({
-      id: message.chat_id,
-      participants: { $in: [req.user.id] }
+    const cluster = await Cluster.findOne({
+      id: message.cluster_id,
+      members: { $in: req.user.id }
     }).lean();
     
-    if (!chat) {
+    if (!cluster) {
       return res.status(403).json({ error: 'Not authorized' });
     }
     
-    await Message.updateOne(
+    await ClusterMessage.updateOne(
       { id: message.id },
       { $pull: { [`reactions.${emoji}`]: req.user.id } }
     );
     
     await websocketManager.broadcastToChat(
-      SocketEvents.MESSAGE_REACTION,
+      SocketEvents.CLUSTER_MESSAGE_REACTION,
       {
         id: message.id,
         emoji,
         user_id: req.user.id,
         action: 'remove'
       },
-      chat.participants
+      cluster.members
     );
     
     res.json({ success: true });
@@ -251,14 +243,14 @@ router.delete('/:message_id/reactions/:emoji', authenticate, async (req, res) =>
 // TODO: security checks
 router.post('/with-attachment', authenticate, upload.single('file'), async (req, res) => {
   try {
-    const { content, chat_id, reply_to } = req.body;
+    const { content, cluster_id, reply_to } = req.body;
     
-    const chat = await Chat.findOne({
-      id: chat_id,
-      participants: { $in: [req.user.id] }
+    const cluster = await Cluster.findOne({
+      id: cluster_id,
+      members: { $in: req.user.id }
     }).lean();
     
-    if (!chat) {
+    if (!cluster) {
       await fs.unlink(req.file.path);
       return res.status(404).json({ error: 'Chat not found' });
     }
@@ -272,13 +264,13 @@ router.post('/with-attachment', authenticate, upload.single('file'), async (req,
       uploaded_at: new Date()
     };
     
-    const message = new Message({
+    const message = new ClusterMessage({
       content: content || '',
       sender_id: req.user.id,
       sender_username: req.user.username,
       sender_display_name: req.user.display_name,
       sender_avatar: req.user.avatar,
-      chat_id,
+      cluster_id,
       reply_to,
       attachments: [attachment],
     });
@@ -291,7 +283,7 @@ router.post('/with-attachment', authenticate, upload.single('file'), async (req,
     await websocketManager.broadcastToChat(
       SocketEvents.NEW_MESSAGE,
       messageObj,
-      chat.participants
+      cluster.members
     );
     
     res.json(messageObj);

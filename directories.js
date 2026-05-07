@@ -9,8 +9,9 @@ const UPLOAD_DIR = join(__dirname, 'uploads');
 // Ensure upload directory exists
 await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
+
 export {
     __filename,
     __dirname,
-    UPLOAD_DIR
+    UPLOAD_DIR,
 }

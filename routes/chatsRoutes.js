@@ -192,29 +192,5 @@ router.get('/:chat_id/messages', authenticate, async (req, res) => {
   }
 });
 
-router.get('/:chat_id/unread', authenticate, async (req, res) => {
-  try {
-    const chat = await Chat.findOne({
-      id: req.params.chat_id,
-      participants: req.user.id
-    }).lean();
-    
-    if (!chat) {
-      return res.status(404).json({ error: 'Chat not found' });
-    }
-    
-    const count = await Message.countDocuments({
-      chat_id: req.params.chat_id,
-      sender_id: { $ne: req.user.id },
-      read_by: { $ne: req.user.id }
-    });
-    
-    res.json({ unread_count: count });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 
 export default router

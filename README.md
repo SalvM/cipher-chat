@@ -216,7 +216,7 @@ socket.emit('message', {
   is_typing: true
 }
 
-// Message read
+// Message read - DEPRECATED
 {
   type: 'message_read',
   message_id: 'msg-123',

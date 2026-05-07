@@ -32,12 +32,10 @@ const messageSchema = new mongoose.Schema({
   sender_display_name: String,
   sender_avatar: String,
   chat_id: { type: String, ref: 'Chat', index: true },
-  reply_to: String,
+  reply_to: { type: String, ref: 'User' },
   reply_to_content: String,
-  created_at: { type: Date, default: Date.now, index: true },
   edited: { type: Boolean, default: false },
   edited_at: Date,
-  encrypted: { type: Boolean, default: false },
   attachments: [{
     file_id: String,
     original_name: String,
@@ -47,7 +45,7 @@ const messageSchema = new mongoose.Schema({
     uploaded_at: Date
   }],
   reactions: { type: Map, of: [String], default: {} },
-  read_by: [{ type: String, ref: 'User' }],
+  created_at: { type: Date, default: Date.now, index: true },
   expires_at: { type: Date, index: true }
 });
 
@@ -74,14 +72,12 @@ const clusterMessageSchema = new mongoose.Schema({
   sender_display_name: String,
   sender_avatar: String,
   cluster_id: { type: String, ref: 'Cluster', index: true },
+  reply_to: { type: String, ref: 'User' },
+  reply_to_content: String,
   topic_id: String,
-  created_at: { type: Date, default: Date.now, index: true },
   edited: { type: Boolean, default: false },
   edited_at: Date,
-  reply_to: String,
-  reply_to_content: String,
-  reactions: { type: Map, of: [String], default: {} },
-    attachments: [{
+  attachments: [{
     file_id: String,
     original_name: String,
     content_type: String,
@@ -89,6 +85,9 @@ const clusterMessageSchema = new mongoose.Schema({
     is_image: Boolean,
     uploaded_at: Date
   }],
+  reactions: { type: Map, of: [String], default: {} },
+  created_at: { type: Date, default: Date.now, index: true },
+  expires_at: { type: Date, index: true }
 });
 
 const invitationSchema = new mongoose.Schema({

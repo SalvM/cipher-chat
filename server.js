@@ -34,6 +34,7 @@ import ChatsRoutes from './routes/chatsRoutes.js'
 import ClustersRoutes from './routes/clustersRoutes.js'
 import InvitationRoutes from './routes/invitationsRoutes.js'
 import MessagesRoutes from './routes/messagesRoutes.js'
+import ClusterMessagesRoutes from './routes/clusterMessagesRoutes.js'
 import UsersRoutes from './routes/usersRoutes.js'
 import { rateLimiter } from './utils/limiters.js';
 import { authenticate, verifyToken } from './utils/auth.js';
@@ -81,6 +82,7 @@ router.use('/chats', ChatsRoutes)
 router.use('/clusters', ClustersRoutes)
 router.use('/invitations', InvitationRoutes)
 router.use('/messages', MessagesRoutes)
+router.use('/clusterMessages', ClusterMessagesRoutes)
 router.use('/users', UsersRoutes)
 
 router.get('/files/:file_id', authenticate, async (req, res) => {

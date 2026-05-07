@@ -139,47 +139,4 @@ router.get('/:cluster_id/topics/:topic_id/messages', authenticate, async (req, r
   }
 });
 
-router.post('/:cluster_id/topics/:topic_id/messages', authenticate, async (req, res) => {
-  try {
-    const { content } = req.body;
-    if (content === undefined || content.length === 0) return res.status(501); 
-
-    const cluster = await Cluster.findOne({
-      id: req.params.cluster_id,
-      members: req.user.id
-    }).lean();
-    
-    if (!cluster) {
-      return res.status(404).json({ error: 'Cluster not found' });
-    }
-    
-    const topicExists = cluster.topics.some(t => t.id === req.params.topic_id);
-    if (!topicExists) {
-      return res.status(404).json({ error: 'Topic not found' });
-    }
-    
-    const message = new ClusterMessage({
-      content,
-      sender_id: req.user.id,
-      sender_username: req.user.username,
-      sender_display_name: req.user.display_name,
-      sender_avatar: req.user.avatar,
-      cluster_id: req.params.cluster_id,
-      topic_id: req.params.topic_id
-    });
-    
-    await message.save();
-    
-    const messageObj = message.toObject();
-    delete messageObj._id;
-
-    websocketManager.broadcastToChat(SocketEvents.CLUSTER_MESSAGE, messageObj, cluster.members)
-    
-    res.json();
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 export default router
