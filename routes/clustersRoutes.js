@@ -3,6 +3,8 @@ import { Chat, Cluster, ClusterMessage, User } from "../utils/db.js";
 import websocketManager from "../websocket.js";
 import SocketEvents from "../socketEvents.js";
 import { authenticate } from "../utils/auth.js";
+import { v4 as uuidv4 } from 'uuid';
+
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ router.get('/:cluster_id', authenticate, async (req, res) => {
   try {
     const cluster = await Cluster.findOne({
       id: req.params.cluster_id,
-      members: req.user.id
+      members: { $in: req.user.id }
     }).lean();
     
     if (!cluster) {

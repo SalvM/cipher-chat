@@ -33,7 +33,27 @@ router.get('/:invitation_id', authenticate, async (req, res) => {
         const updateData = {};
         updateData.members = [...cluster.members, req.user.id]
         await Cluster.updateOne({ id: cluster.id }, { $set: updateData });
-        
+            
+        User.findOne({ id: req.user.id }, '-password_hash -recovery_hash').lean()
+            .then(memberDetail => {
+                if (memberDetail) {
+                    memberDetail.status = websocketManager.userStatus.get(req.user.id) || memberDetail.status;
+                }
+                return memberDetail
+            })
+            .catch(err => console.error('[invitationsRoutes] GET /', err))
+            .then((memberDetail) => {
+                websocketManager.broadcastToChat(
+                    SocketEvents.USER_JOINED_CLUSTER,
+                    {
+                        id: req.user.id,
+                        cluster_id: cluster.id,
+                        memberDetail
+                    },
+                    cluster.members
+                );
+            }) 
+
         res.json({ message: `Joined ${cluster.name} successfully` });
     } catch (err) {
         console.error(err);
