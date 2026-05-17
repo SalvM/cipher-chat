@@ -3,9 +3,19 @@ import { useCounterStore } from '../store/counterStore';
 import reactLogo from '@/assets/react.svg'
 import viteLogo from '@/assets/vite.svg'
 import heroImg from '@/assets/hero.png'
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function Home() {
-  const { count, increment } = useCounterStore()  
+  const { count, increment } = useCounterStore()
+  const queryClient = useQueryClient()
+
+  const { isPending, error, data } = useQuery({
+    queryKey: ['repoData'],
+    queryFn: () =>
+      fetch('https://api.github.com/repos/TanStack/query').then((res) =>
+        res.json(),
+      ),
+  })
   return (
     <>
       <section id="center">
@@ -114,6 +124,16 @@ export default function Home() {
 
       <div className="ticks"></div>
       <section id="spacer"></section>
+
+      {data && (
+        <div>
+          <h1>{data.name}</h1>
+          <p>{data.description}</p>
+          <strong>👀 {data.subscribers_count}</strong>{' '}
+          <strong>✨ {data.stargazers_count}</strong>{' '}
+          <strong>🍴 {data.forks_count}</strong>
+        </div>
+      )}
 
     </>
 
