@@ -1,22 +1,21 @@
 import { useCounterStore } from '../store/counterStore';
 
-import reactLogo from '@/assets/react.svg'
-import viteLogo from '@/assets/vite.svg'
-import heroImg from '@/assets/hero.png'
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import reactLogo from '@/assets/react.svg';
+import viteLogo from '@/assets/vite.svg';
+import heroImg from '@/assets/hero.png';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui';
 
 export default function Home() {
-  const { count, increment } = useCounterStore()
-  const queryClient = useQueryClient()
+  const { count, increment } = useCounterStore();
 
-  const { isPending, error, data } = useQuery({
+  const { data } = useQuery({
     queryKey: ['repoData'],
     queryFn: () =>
       fetch('https://api.github.com/repos/TanStack/query').then((res) =>
-        res.json(),
+        res.json()
       ),
-  })
+  });
   return (
     <>
       <section id="center">
@@ -135,8 +134,6 @@ export default function Home() {
           <strong>🍴 {data.forks_count}</strong>
         </div>
       )}
-
     </>
-
   );
 }
