@@ -6,7 +6,7 @@ import heroImg from '@/assets/hero.png';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui';
 
-export default function Home() {
+export default function HomePage() {
   const { count, increment } = useCounterStore();
 
   const { data } = useQuery({
