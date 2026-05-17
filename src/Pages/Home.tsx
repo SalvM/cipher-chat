@@ -4,6 +4,7 @@ import reactLogo from '@/assets/react.svg'
 import viteLogo from '@/assets/vite.svg'
 import heroImg from '@/assets/hero.png'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui';
 
 export default function Home() {
   const { count, increment } = useCounterStore()
@@ -30,13 +31,13 @@ export default function Home() {
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          intent="primary"
           className="counter"
           onClick={() => increment()}
         >
           Count is {count}
-        </button>
+        </Button>
       </section>
 
       <div className="ticks"></div>
