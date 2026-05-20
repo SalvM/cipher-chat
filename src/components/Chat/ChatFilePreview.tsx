@@ -2,6 +2,9 @@ import { MessageSquare, Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatFileSize } from '@/utils/fileUtils';
 
+/**
+ * This file preview is shown in the ChatInput field
+ */
 interface ChatFilePreviewProps {
   filePreview: File | null;
   resetFilePreview: () => void;

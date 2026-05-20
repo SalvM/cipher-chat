@@ -1,8 +1,8 @@
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useRef, useState, type SubmitEventHandler } from 'react';
-import FileInput from './FileInput';
+import { useRef, useState } from 'react';
+import FileInput from '../Common/FileInput';
 import { ChatFilePreview } from './ChatFilePreview';
 
 export interface ChatInputProps {

@@ -13,13 +13,12 @@ import {
 import { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scrollarea';
-import { ChatInput } from '@/components/Common/ChatInput';
-
-const DIO_SRC =
-  'https://avatars.fastly.steamstatic.com/020e751b71cecafb24d2716b46c5b212930a75ab_full.jpg';
-const GYRO_SRC =
-  'https://steamuserimages-a.akamaihd.net/ugc/784111175456702019/FA82EEB8C8BEF311A2E8370602C39200ACB2C1F2/?imw=512&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChatInput } from '@/components/Chat/ChatInput';
+import type { Message } from '@/types/messageTypes';
+import MessageBubble from '@/components/Chat/MessageBubble';
+import { DIO_SRC, GYRO_SRC, jojoMessages, JOSEPH_SRC } from '@/utils/mockUtils';
+import { ChatReplyPreview } from '@/components/Chat/ChatReplyPreview';
 
 // ── Showcase section wrapper ───────────────────────────────────
 
@@ -45,6 +44,7 @@ function Section({
 export default function HomePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filePreview, setFilePreview] = useState<File | null>(null);
+  const messages: Message[] = jojoMessages;
 
   const { data: repoData } = useQuery({
     queryKey: ['tanstack-query-repo'],
@@ -90,7 +90,7 @@ export default function HomePage() {
       <Section title="Avatar">
         <Avatar src={DIO_SRC} alt="Dio Brando" fallback="DB" size="sm" />
         <Avatar src={GYRO_SRC} alt="Gyro Zeppeli" fallback="GZ" size="md" />
-        <Avatar src={DIO_SRC} alt="Dio Brando" fallback="DB" size="lg" />
+        <Avatar src={JOSEPH_SRC} alt="Dio Brando" fallback="DB" size="lg" />
         <Avatar fallback="??" size="md" />
       </Section>
 
@@ -176,8 +176,33 @@ export default function HomePage() {
         </ScrollArea>
       </Section>
 
+      {/*  ── Chat ──  */}
+      <Section title="Chat">
+        <div className="flex w-full flex-col gap-3">
+          <ScrollArea>
+            {messages.map((message, index) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                isOwn={message.sender_id === '3'}
+                showAvatar={
+                  index === 0 ||
+                  messages[index - 1].sender_id !== messages[index].sender_id
+                }
+                onReact={console.log}
+                currentUserId={'3'}
+              />
+            ))}
+          </ScrollArea>
+        </div>
+      </Section>
+
       {/*  ── ChatInput ──  */}
       <Section title="ChatInput">
+        <ChatReplyPreview
+          replyingTo={messages[2]}
+          clearReplyingTo={console.log}
+        />
         <div className="flex w-full flex-col gap-3">
           <ChatInput
             handleSendMessage={(message, file) => {
