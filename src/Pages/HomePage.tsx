@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scrollarea';
+import { ChatInput } from '@/components/Common/ChatInput';
 
 const DIO_SRC =
   'https://avatars.fastly.steamstatic.com/020e751b71cecafb24d2716b46c5b212930a75ab_full.jpg';
@@ -43,6 +44,7 @@ function Section({
 
 export default function HomePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filePreview, setFilePreview] = useState<File | null>(null);
 
   const { data: repoData } = useQuery({
     queryKey: ['tanstack-query-repo'],
@@ -106,7 +108,7 @@ export default function HomePage() {
 
       {/* ── Dropdown ── */}
       <Section title="Dropdown Menu">
-        <DropdownMenu trigger={<Avatar src={DIO_SRC} fallback="DB" />}>
+        <DropdownMenu trigger={<Button intent="primary">User status</Button>}>
           <DropdownLabel>Dio Brando</DropdownLabel>
           <DropdownSeparator />
           <DropdownItem onSelect={() => null}>Settings</DropdownItem>
@@ -172,6 +174,21 @@ export default function HomePage() {
             ))}
           </div>
         </ScrollArea>
+      </Section>
+
+      {/*  ── ChatInput ──  */}
+      <Section title="ChatInput">
+        <div className="flex w-full flex-col gap-3">
+          <ChatInput
+            handleSendMessage={(message, file) => {
+              console.log(message);
+              setFilePreview(file);
+            }}
+            isUploading={false}
+            uploadDisabled={false}
+            handleTyping={() => null}
+          />
+        </div>
       </Section>
 
       {/* ── React Query demo ── */}

@@ -33,18 +33,22 @@ export interface InputProps
   extends
     Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
+  containerClassName?: string | null;
   label?: string;
   error?: string;
   hint?: string;
+  ref?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function Input({
   className,
+  containerClassName,
   size,
   state,
   label,
   error,
   hint,
+  ref,
   id,
   ...props
 }: InputProps) {
@@ -52,7 +56,7 @@ export function Input({
   const resolvedState = error ? 'error' : state;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn('flex flex-col w-full', containerClassName ?? '')}>
       {label && (
         <label
           htmlFor={inputId}
@@ -64,6 +68,7 @@ export function Input({
 
       <input
         id={inputId}
+        ref={ref}
         className={cn(inputVariants({ size, state: resolvedState }), className)}
         aria-invalid={!!error}
         aria-describedby={

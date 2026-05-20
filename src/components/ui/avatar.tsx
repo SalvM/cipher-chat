@@ -35,7 +35,7 @@ export function Avatar({ className, size, src, alt, fallback }: AvatarProps) {
           alt={alt}
         />
         <AvatarPrimitive.Fallback
-          className="leading-1 flex size-full items-center justify-center bg-base text-[15px] font-medium text-primary"
+          className="leading-1 flex size-full items-center justify-center bg-surface text-[15px] font-medium text-primary"
           delayMs={600}
         >
           {fallback ?? '??'}
