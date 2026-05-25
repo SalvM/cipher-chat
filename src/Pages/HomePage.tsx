@@ -152,7 +152,7 @@ export default function HomePage() {
         <Button onClick={() => setNewChatDialogOpen(true)}>Open dialog</Button>
         <NewChatDialog
           dialogOpen={newChatDialogOpen}
-          setDialogOpen={setNewChatDialogOpen}
+          closeDialog={() => setNewChatDialogOpen(false)}
           onCreated={console.log}
         />
       </Section>

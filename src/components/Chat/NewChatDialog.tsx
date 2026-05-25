@@ -4,16 +4,17 @@ import { Input } from '@/components/ui/input';
 import api from '@/services/Api';
 import type { User } from '@/types/userTypes';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Avatar } from '../ui/avatar';
 
 interface NewChatDialogProps {
   dialogOpen: boolean;
-  setDialogOpen: (value: boolean) => void;
+  closeDialog: () => void;
   onCreated: (chatId: string) => void;
 }
 
 export const NewChatDialog = ({
   dialogOpen,
-  setDialogOpen,
+  closeDialog,
   onCreated,
 }: NewChatDialogProps) => {
   const [query, setQuery] = useState('');
@@ -28,6 +29,7 @@ export const NewChatDialog = ({
   );
 
   const searchUsers = async (query: string) => {
+    if (isLoading) return;
     if (!query) {
       setSearchResult([]);
     }
@@ -38,10 +40,10 @@ export const NewChatDialog = ({
 
     try {
       setLoading(true);
-      const users = await api.get<User[]>(
-        `users/search?q=${encodeURIComponent(query)}`
+      const responseData = await api.get<{ users: User[] }>(
+        `/users/search?q=${encodeURIComponent(query)}`
       );
-      setSearchResult(users);
+      setSearchResult(responseData?.users ?? []);
     } catch (error) {
       setSearchResult([]);
     } finally {
@@ -49,7 +51,6 @@ export const NewChatDialog = ({
     }
   };
 
-  const closeDialog = () => setDialogOpen(false);
   const handleStart = async () => {
     if (!suggestion) return;
     onCreated(suggestion.id);
@@ -67,18 +68,19 @@ export const NewChatDialog = ({
     debounceRef.current = setTimeout(async () => {
       searchUsers(query);
     }, 400);
-  }, [query, searchUsers]);
+  }, [query]);
 
   return (
     <Dialog
       open={dialogOpen}
-      onOpenChange={setDialogOpen}
       title="New Chat"
       description="Search for a user to start a conversation."
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-row align-center gap-2">
-          <span className="dialog-search-icon">@</span>
+          <span className="font-sm font-bold font-mono text-text-secondary">
+            @
+          </span>
           <Input
             placeholder="e.g. @ayeyebrazorf"
             value={query}
@@ -86,25 +88,27 @@ export const NewChatDialog = ({
             onKeyDown={(e) => e.key === 'Escape' && closeDialog()}
           />
         </div>
-        {isLoading && <span className="dialog-spinner" />}
+        {isLoading && (
+          <div className="w-5 h-5 border-2 border-border border-t-white rounded-full animate-spin" />
+        )}
 
         {suggestion && (
-          <div className="dialog-suggestion">
-            <div className="dialog-user-avatar">
-              {suggestion.avatar ? (
-                <img src={suggestion.avatar} alt="" />
-              ) : (
-                <span>{suggestion.username[0].toUpperCase()}</span>
-              )}
-            </div>
-            <div className="dialog-user-info">
+          <div className="flex items-center gap-4 p-4 bg-overlay">
+            <Avatar
+              src={suggestion.avatar}
+              alt={suggestion.avatar}
+              fallback={suggestion.username[0].toUpperCase()}
+            />
+            <div className="flex flex-1 flex-col gap-0">
               {suggestion.display_name && (
-                <span className="dialog-user-name">
+                <span className="font-md text-text-primary">
                   {suggestion.display_name}
                 </span>
               )}
               {suggestion.username && (
-                <span className="dialog-user-bio">@{suggestion.username}</span>
+                <span className="font-sm text-text-secondary">
+                  @{suggestion.username}
+                </span>
               )}
             </div>
             <span className="dialog-user-check">✓</span>
@@ -124,19 +128,6 @@ export const NewChatDialog = ({
           </Button>
         </div>
       </div>
-
-      <style>
-        {`
-        .dialog-spinner {
-          width: 14px; height: 14px;
-          border: 2px solid rgba(99,179,237,0.2);
-          border-top-color: #63b3ed;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-          flex-shrink: 0;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }`}
-      </style>
     </Dialog>
   );
 };
