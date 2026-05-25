@@ -1,4 +1,3 @@
-// src/components/chat/ReactionPicker.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import * as Popover from '@radix-ui/react-popover';

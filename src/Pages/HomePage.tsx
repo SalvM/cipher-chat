@@ -19,6 +19,7 @@ import type { Message } from '@/types/messageTypes';
 import MessageBubble from '@/components/Chat/MessageBubble';
 import { DIO_SRC, GYRO_SRC, jojoMessages, JOSEPH_SRC } from '@/utils/mockUtils';
 import { ChatReplyPreview } from '@/components/Chat/ChatReplyPreview';
+import { NewChatDialog } from '@/components/Chat/NewChatDialog';
 
 // ── Showcase section wrapper ───────────────────────────────────
 
@@ -43,6 +44,7 @@ function Section({
 
 export default function HomePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
   const [filePreview, setFilePreview] = useState<File | null>(null);
   const messages: Message[] = jojoMessages;
 
@@ -143,6 +145,16 @@ export default function HomePage() {
             </div>
           </div>
         </Dialog>
+      </Section>
+
+      {/* ── NewChat Dialog ── */}
+      <Section title="NewChatDialog">
+        <Button onClick={() => setNewChatDialogOpen(true)}>Open dialog</Button>
+        <NewChatDialog
+          dialogOpen={newChatDialogOpen}
+          setDialogOpen={setNewChatDialogOpen}
+          onCreated={console.log}
+        />
       </Section>
 
       {/* ── Input ── */}
