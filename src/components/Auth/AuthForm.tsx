@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, type SubmitEventHandler } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -20,12 +20,28 @@ const AuthForm = () => {
         recoveryPhrase: '',
         newPassword: '',
     });
+    const formText = useMemo(() => {
+        switch (authMode) {
+            case 'login':
+                return {
+                    title: 'Welcome Back',
+                    description: 'Sign in to continue to Cipher Chat',
+                };
+            case 'register':
+                return {
+                    title: 'Create Account',
+                    description: 'Start your private messaging journey',
+                };
+            default:
+                return { title: '', description: '' };
+        }
+    }, [authMode]);
 
     if (isAuthenticated) {
         return (<Navigate replace to="/chat" />)
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (e) => {
         e.preventDefault();
         setIsLoading(true);
 
@@ -51,23 +67,6 @@ const AuthForm = () => {
         }
         setIsLoading(false);
     };
-
-    const formText = useMemo(() => {
-        switch (authMode) {
-            case 'login':
-                return {
-                    title: 'Welcome Back',
-                    description: 'Sign in to continue to Cipher Chat',
-                };
-            case 'register':
-                return {
-                    title: 'Create Account',
-                    description: 'Start your private messaging journey',
-                };
-            default:
-                return { title: '', description: '' };
-        }
-    }, [authMode]);
 
     return (
         <div className="w-full max-w-sm rounded-lg bg-surface shadow-lg">

@@ -1,98 +1,100 @@
 @import 'tailwindcss';
 @import './styles/theme.css';
 
-/* ── Reset ── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@layer base {
+  /* ── Reset ── */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-/* ── Root ── */
-html {
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
-  color-scheme: dark;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+  /* ── Root ── */
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
-body {
-  background-color: theme(--color-base);
-  color: theme(--color-text-primary);
-  min-height: 100dvh;
-}
+  body {
+    background-color: theme(--color-base);
+    color: theme(--color-text-primary);
+    min-height: 100dvh;
+  }
 
-#root {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
 
-/* ── Typography ── */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-weight: 600;
-  line-height: 1.25;
-  color: theme(--color-text-primary);
-}
+  /* ── Typography ── */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    line-height: 1.25;
+    color: theme(--color-text-primary);
+  }
 
-h1 {
-  font-size: 2rem;
-}
-h2 {
-  font-size: 1.5rem;
-}
-h3 {
-  font-size: 1.25rem;
-}
-h4 {
-  font-size: 1.125rem;
-}
-h5 {
-  font-size: 1rem;
-}
-h6 {
-  font-size: 0.875rem;
-}
+  h1 {
+    font-size: 2rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
+  h3 {
+    font-size: 1.25rem;
+  }
+  h4 {
+    font-size: 1.125rem;
+  }
+  h5 {
+    font-size: 1rem;
+  }
+  h6 {
+    font-size: 0.875rem;
+  }
 
-p {
-  color: theme(--color-text-secondary);
-  line-height: 1.6;
-}
+  p {
+    color: theme(--color-text-secondary);
+    line-height: 1.6;
+  }
 
-a {
-  color: theme(--color-primary);
-  text-decoration: none;
-}
+  a {
+    color: theme(--color-primary);
+    text-decoration: none;
+  }
 
-a:hover {
-  color: theme(--color-primary-hover);
-}
+  a:hover {
+    color: theme(--color-primary-hover);
+  }
 
-code,
-kbd,
-pre {
-  font-family: var(--font-mono);
-  font-size: 0.875em;
-}
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
 
-/* ── Media ── */
-img,
-video,
-svg {
-  display: block;
-  max-width: 100%;
-}
+  /* ── Media ── */
+  img,
+  video,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
 
-/* ── Focus ── */
-:focus-visible {
-  outline: 2px solid theme(--color-primary);
-  outline-offset: 2px;
+  /* ── Focus ── */
+  :focus-visible {
+    outline: 2px solid theme(--color-primary);
+    outline-offset: 2px;
+  }
 }

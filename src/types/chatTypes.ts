@@ -6,13 +6,13 @@ export interface Chat {
   id: ID;
   type: 'private' | 'group';
   partecipants: ID[];
+  participant_details: User[];
   disappearing_timer: number | null; // minutes, 0 = off
   created_at: Timestamp;
+  last_message?: Message;
 
   // Populated fields
-  avatar?: string;
-  last_message?: Message;
-  participant_details?: User[];
+  userPreview?: User;
 }
 
 export interface ChatSettings {

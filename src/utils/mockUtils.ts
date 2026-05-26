@@ -1,4 +1,6 @@
+import type { Chat } from '@/types/chatTypes';
 import type { Message, MessageAttachment } from '@/types/messageTypes';
+import type { User } from '@/types/userTypes';
 
 const DIO_SRC =
   'https://avatars.fastly.steamstatic.com/020e751b71cecafb24d2716b46c5b212930a75ab_full.jpg';
@@ -16,6 +18,39 @@ const epsteinAttachment: MessageAttachment = {
   is_image: false,
   created_at: 'created_at',
 };
+
+const mockUsers: User[] = [
+  {
+    id: '1',
+    username: 'the_world_stops',
+    username_lower: 'the_world_stops',
+    display_name: 'DIO Brando',
+    avatar: DIO_SRC,
+    bio: 'WRYYYYYYY! Lord of Evil',
+    status: 'online',
+    created_at: '2024-01-15T10:30:00Z',
+  },
+  {
+    id: '2',
+    username: 'steel_ball_run',
+    username_lower: 'steel_ball_run',
+    display_name: 'Gyro Zeppeli',
+    avatar: GYRO_SRC,
+    bio: 'Spinning is justice! 回転は正義だ',
+    status: 'online',
+    created_at: '2024-02-20T14:45:00Z',
+  },
+  {
+    id: '3',
+    username: 'joestar_legacy',
+    username_lower: 'joestar_legacy',
+    display_name: 'Joseph Joestar',
+    avatar: JOSEPH_SRC,
+    bio: 'Your next line is... "Nice to meet you!" そして君の次のセリフは...',
+    status: 'dnd',
+    created_at: '2024-03-10T09:15:00Z',
+  },
+];
 
 const jojoMessages: Message[] = [
   {
@@ -73,4 +108,50 @@ const jojoMessages: Message[] = [
   },
 ];
 
-export { jojoMessages, DIO_SRC, GYRO_SRC, JOSEPH_SRC };
+// ============ MOCK CHATS ============
+const mockChats: Chat[] = [
+  {
+    id: 'chat_1',
+    type: 'private',
+    partecipants: ['1', '3'], // DIO e Joseph
+    disappearing_timer: null,
+    created_at: '2024-03-15T11:20:00Z',
+    avatar: DIO_SRC,
+    participant_details: [mockUsers[0], mockUsers[2]],
+    last_message: {
+      id: 'msg_1',
+      chat_id: 'chat_1',
+      sender_id: '1',
+      content: 'WRYYYYYYY!',
+      created_at: '2024-03-15T11:20:00Z',
+      updated_at: '2024-03-15T11:20:00Z',
+      edited: false,
+      read_by: [],
+      reactions: {},
+      attachments: [],
+    },
+  },
+  {
+    id: 'chat_2',
+    type: 'group',
+    partecipants: ['1', '2', '3'],
+    disappearing_timer: 5, // 5 minuti
+    created_at: '2024-03-10T08:00:00Z',
+    avatar: 'https://via.placeholder.com/150?text=JoJo+Squad',
+    participant_details: mockUsers,
+    last_message: {
+      id: 'msg_2',
+      chat_id: 'chat_2',
+      sender_id: '2',
+      content: 'Spinning is justice!',
+      created_at: '2024-03-15T10:45:00Z',
+      updated_at: '2024-03-15T11:20:00Z',
+      edited: false,
+      read_by: [],
+      reactions: {},
+      attachments: [],
+    },
+  },
+];
+
+export { jojoMessages, mockUsers, mockChats, DIO_SRC, GYRO_SRC, JOSEPH_SRC };
