@@ -90,7 +90,12 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         const { token, user } = responseData;
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', token);
-          set({ token, user: parseUserFromAPI(user), isLoading: false });
+          set({
+            token,
+            user: parseUserFromAPI(user),
+            isLoading: false,
+            isAuthenticated: true,
+          });
         }
         return { success: true };
       } catch (error: any) {

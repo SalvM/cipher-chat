@@ -1,22 +1,9 @@
-import AuthModal from '@/components/Auth/AuthModal';
-import { Button } from '@/components/ui/button';
-import { Section } from '@/components/ui/section';
-import { useState } from 'react';
+import AuthForm from '@/components/Auth/AuthForm';
 
 export default function LoginPage() {
-  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Login</h2>
-      <p>Lorem ipsum dolor sit amet, consectetur adip.</p>
-      <Section title="NewChatDialog">
-        <Button onClick={() => setAuthDialogOpen(true)}>Open dialog</Button>
-        <AuthModal
-          dialogOpen={authDialogOpen}
-          onOpenChange={setAuthDialogOpen}
-          closeDialog={() => setAuthDialogOpen(false)}
-        />
-      </Section>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-base px-4 py-12 sm:px-6 lg:px-8">
+      <AuthForm />
     </div>
   );
 }
