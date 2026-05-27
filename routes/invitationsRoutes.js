@@ -6,90 +6,98 @@ import SocketEvents from "../socketEvents.js";
 import { authenticate } from "../utils/auth.js";
 
 const router = express.Router();
-const MIN_INVITATION_EXPIRING_HOURS = 1
-const MAX_INVITATION_EXPIRING_HOURS = 2400
+const MIN_INVITATION_EXPIRING_HOURS = 1;
+const MAX_INVITATION_EXPIRING_HOURS = 2400;
 
-router.get('/:invitation_id', authenticate, async (req, res) => {
-    try {
-        const invitation = await Invitation.findOne({
-            id: req.params.invitation_id,
-        }).lean();
-        
-        if (!invitation) {
-            return res.status(404).json({ error: 'Invitation not found' });
-        }
+router.get("/:invitation_id", authenticate, async (req, res) => {
+  try {
+    const invitation = await Invitation.findOne({
+      _id: req.params.invitation_id,
+    }).lean();
 
-        const cluster = await Cluster.findOne({
-            id: invitation.cluster_id,
-        }).lean();
-        
-        if (!cluster) {
-            return res.status(404).json({ error: 'Cluster not found' });
-        }
-
-        if (cluster.members.includes(req.user.id)) {
-            return res.json({ message: 'Already a member' });
-        }
-        const updateData = {};
-        updateData.members = [...cluster.members, req.user.id]
-        await Cluster.updateOne({ id: cluster.id }, { $set: updateData });
-            
-        User.findOne({ id: req.user.id }, '-password_hash -recovery_hash').lean()
-            .then(memberDetail => {
-                if (memberDetail) {
-                    memberDetail.status = websocketManager.userStatus.get(req.user.id) || memberDetail.status;
-                }
-                return memberDetail
-            })
-            .catch(err => console.error('[invitationsRoutes] GET /', err))
-            .then((memberDetail) => {
-                websocketManager.broadcastToChat(
-                    SocketEvents.USER_JOINED_CLUSTER,
-                    {
-                        id: req.user.id,
-                        cluster_id: cluster.id,
-                        memberDetail
-                    },
-                    cluster.members
-                );
-            }) 
-
-        res.json({ message: `Joined ${cluster.name} successfully` });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error' });
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found" });
     }
-})
 
-router.post('/', authenticate, async (req, res) => {
-    try {
-        let { clusterId, expireHours } = req.body;
-        const cluster = await Cluster.findOne({
-            id: clusterId,
-            owner_id: req.user.id
-        }).lean();
-        
-        if (!cluster) {
-            return res.status(403).json({ error: 'Only the owner can create an invitation.' });
-        }
+    const cluster = await Cluster.findOne({
+      _id: invitation.cluster_id,
+    }).lean();
 
-        expireHours = expireHours > MAX_INVITATION_EXPIRING_HOURS ?
-            Math.min(expireHours, MAX_INVITATION_EXPIRING_HOURS) :
-            expireHours <= MIN_INVITATION_EXPIRING_HOURS ?
-            Math.max(expireHours, MIN_INVITATION_EXPIRING_HOURS) :
-            expireHours
-
-        const invitation = new Invitation({
-            cluster_id: clusterId,
-            expires_at: moment().add(expireHours, 'hours')
-        })
-        await invitation.save();
-        
-        res.json({ invitationId: invitation.id });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error' });
+    if (!cluster) {
+      return res.status(404).json({ error: "Cluster not found" });
     }
-})
 
-export default router
+    if (
+      cluster.members.some((_id) => _id.toString() === req.user._id.toString())
+    ) {
+      return res.json({ message: "Already a member" });
+    }
+    const updateData = {};
+    updateData.members = [...cluster.members, req.user._id];
+    await Cluster.updateOne({ _id: cluster._id }, { $set: updateData });
+
+    User.findOne({ _id: req.user._id }, "-password_hash -recovery_hash")
+      .lean()
+      .then((memberDetail) => {
+        if (memberDetail) {
+          memberDetail.status =
+            websocketManager.userStatus.get(req.user._id) ||
+            memberDetail.status;
+        }
+        return memberDetail;
+      })
+      .catch((err) => console.error("[invitationsRoutes] GET /", err))
+      .then((memberDetail) => {
+        websocketManager.broadcastToChat(
+          SocketEvents.USER_JOINED_CLUSTER,
+          {
+            _id: req.user._id,
+            cluster_id: cluster._id,
+            memberDetail,
+          },
+          cluster.members,
+        );
+      });
+
+    res.json({ message: `Joined ${cluster.name} successfully` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/", authenticate, async (req, res) => {
+  try {
+    let { clusterId, expireHours } = req.body;
+    const cluster = await Cluster.findOne({
+      _id: clusterId,
+      owner_id: req.user._id,
+    }).lean();
+
+    if (!cluster) {
+      return res
+        .status(403)
+        .json({ error: "Only the owner can create an invitation." });
+    }
+
+    expireHours =
+      expireHours > MAX_INVITATION_EXPIRING_HOURS
+        ? Math.min(expireHours, MAX_INVITATION_EXPIRING_HOURS)
+        : expireHours <= MIN_INVITATION_EXPIRING_HOURS
+          ? Math.max(expireHours, MIN_INVITATION_EXPIRING_HOURS)
+          : expireHours;
+
+    const invitation = new Invitation({
+      cluster_id: clusterId,
+      expires_at: moment().add(expireHours, "hours"),
+    });
+    await invitation.save();
+
+    res.json({ invitationId: invitation._id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+export default router;

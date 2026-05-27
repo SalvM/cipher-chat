@@ -1,9 +1,8 @@
-import mongoose from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
+import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 // ===================== Schemas =====================
 const userSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
   username: { type: String, required: true, unique: true },
   username_lower: { type: String, required: true, unique: true, index: true },
   display_name: String,
@@ -11,92 +10,101 @@ const userSchema = new mongoose.Schema({
   recovery_hash: String,
   avatar: String,
   bio: String,
-  status: { type: String, default: 'offline' },
-  blocked_users: [{ type: String, ref: 'User' }],
-  created_at: { type: Date, default: Date.now }
+  status: { type: String, default: "offline" },
+  blocked_users: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  created_at: { type: Date, default: Date.now },
 });
 
 const chatSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
-  type: { type: String, enum: ['private', 'group'], default: 'private' },
-  participants: [{ type: String, ref: 'User' }],
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   disappearing_timer: Number,
-  created_at: { type: Date, default: Date.now }
+  created_at: { type: Date, default: Date.now },
 });
 
 const messageSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
   content: String,
-  sender_id: { type: String, ref: 'User', index: true },
+  sender_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
   sender_username: String,
   sender_display_name: String,
   sender_avatar: String,
-  chat_id: { type: String, ref: 'Chat', index: true },
-  reply_to: { type: String, ref: 'User' },
+  chat_id: { type: mongoose.Schema.Types.ObjectId, ref: "Chat", index: true },
+  reply_to: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   reply_to_content: String,
   edited: { type: Boolean, default: false },
   edited_at: Date,
-  attachments: [{
-    file_id: String,
-    original_name: String,
-    content_type: String,
-    size: Number,
-    is_image: Boolean,
-    uploaded_at: Date
-  }],
+  attachments: [
+    {
+      file_id: String,
+      original_name: String,
+      content_type: String,
+      size: Number,
+      is_image: Boolean,
+      uploaded_at: Date,
+    },
+  ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date, index: true }
+  expires_at: { type: Date, index: true },
 });
 
 const clusterSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
   name: String,
   description: String,
-  owner_id: { type: String, ref: 'User' },
-  members: [{ type: String, ref: 'User' }],
-  topics: [{
-    id: { type: String, default: uuidv4 },
-    name: String,
-    cluster_id: String,
-    created_at: { type: Date, default: Date.now }
-  }],
-  created_at: { type: Date, default: Date.now }
+  owner_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  topics: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, default: uuidv4 },
+      name: String,
+      cluster_id: String,
+      created_at: { type: Date, default: Date.now },
+    },
+  ],
+  created_at: { type: Date, default: Date.now },
 });
 
 const clusterMessageSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
   content: String,
-  sender_id: { type: String, ref: 'User' },
+  sender_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   sender_username: String,
   sender_display_name: String,
   sender_avatar: String,
-  cluster_id: { type: String, ref: 'Cluster', index: true },
-  reply_to: { type: String, ref: 'User' },
+  cluster_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Cluster",
+    index: true,
+  },
+  reply_to: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   reply_to_content: String,
   topic_id: String,
   edited: { type: Boolean, default: false },
   edited_at: Date,
-  attachments: [{
-    file_id: String,
-    original_name: String,
-    content_type: String,
-    size: Number,
-    is_image: Boolean,
-    uploaded_at: Date
-  }],
+  attachments: [
+    {
+      file_id: String,
+      original_name: String,
+      content_type: String,
+      size: Number,
+      is_image: Boolean,
+      uploaded_at: Date,
+    },
+  ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date, index: true }
+  expires_at: { type: Date, index: true },
 });
 
 const invitationSchema = new mongoose.Schema({
-  id: { type: String, default: uuidv4, unique: true, index: true },
-  cluster_id: { type: String, ref: 'Cluster' },
+  cluster_id: { type: mongoose.Schema.Types.ObjectId, ref: "Cluster" },
   created_at: { type: Date, default: Date.now },
-  expires_at: { type: Date, default: Date.now }
+  expires_at: { type: Date, default: Date.now },
 });
 
 export {
-    userSchema, chatSchema, messageSchema, clusterSchema, clusterMessageSchema, invitationSchema
-}
+  userSchema,
+  chatSchema,
+  messageSchema,
+  clusterSchema,
+  clusterMessageSchema,
+  invitationSchema,
+};
