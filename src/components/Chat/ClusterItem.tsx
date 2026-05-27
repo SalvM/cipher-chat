@@ -1,8 +1,6 @@
-// ClusterItem.tsx
 import { Users } from 'lucide-react';
 
 interface ClusterItemProps {
-    id: string;
     name: string;
     memberCount: number;
     isSelected: boolean;
@@ -10,7 +8,6 @@ interface ClusterItemProps {
 }
 
 export const ClusterItem = ({
-    id,
     name,
     memberCount,
     isSelected,

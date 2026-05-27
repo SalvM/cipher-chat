@@ -1,7 +1,7 @@
 import type { ID, Status, Timestamp } from '@/types/utilityTypes';
 
 export interface User {
-  id: ID;
+  _id: ID;
   username: string;
   username_lower: string;
   display_name: string;

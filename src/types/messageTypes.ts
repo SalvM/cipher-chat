@@ -3,7 +3,7 @@ import type { ID, Timestamp } from '@/types/utilityTypes';
 export type Emoji = '👍' | '❤️' | '😂' | '😮' | '😢' | '🔥' | '👏' | '🎉';
 
 export interface MessageAttachment {
-  id: ID;
+  _id: ID;
   file_id: ID;
   message_id: ID;
   original_name: string;
@@ -19,7 +19,7 @@ export type MessageReactions = {
 };
 
 export interface Message {
-  id: ID;
+  _id: ID;
   chat_id: ID;
   sender_id: ID;
   content: string;

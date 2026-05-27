@@ -67,13 +67,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const handleEdit = () => {
     if (onEdit) {
-      onEdit(message.id, editContent);
+      onEdit(message._id, editContent);
       setIsEditing(false);
     }
   };
 
   const handleReact = (emoji: Emoji) => {
-    onReact(message.id, emoji, 'add');
+    onReact(message._id, emoji, 'add');
   };
 
   const reactionsArray = Object.entries(message.reactions || {}).map(
@@ -165,11 +165,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <div
               className={`
               px-4 py-2.5 
-              ${
-                isOwn && !isCluster
+              ${isOwn && !isCluster
                   ? 'bg-primary text-primary-fg rounded-l-2xl rounded-tr-2xl rounded-br-md'
                   : 'bg-surface text-text-primary rounded-r-2xl rounded-tl-2xl rounded-bl-md'
-              }
+                }
             `}
             >
               <p className="text-sm whitespace-pre-wrap wrap-break-word">
@@ -190,14 +189,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   <button
                     key={emoji}
                     onClick={() =>
-                      onReact(message.id, emoji, reacted ? 'remove' : 'add')
+                      onReact(message._id, emoji, reacted ? 'remove' : 'add')
                     }
                     className={`
                       inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors
-                      ${
-                        reacted
-                          ? 'bg-primary-subtle border border-primary-active'
-                          : 'bg-secondary-subtle border border-border hover:bg-secondary-hover'
+                      ${reacted
+                        ? 'bg-primary-subtle border border-primary-active'
+                        : 'bg-secondary-subtle border border-border hover:bg-secondary-hover'
                       }
                     `}
                   >
@@ -265,7 +263,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 size="icon"
                 intent="ghost"
                 className="h-7 w-7 text-danger"
-                onClick={() => onDelete(message.id)}
+                onClick={() => onDelete(message._id)}
               >
                 <Trash2 className="w-3 h-3" />
               </Button>

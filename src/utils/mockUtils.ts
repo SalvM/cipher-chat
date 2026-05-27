@@ -8,7 +8,7 @@ const GYRO_SRC =
   'https://steamuserimages-a.akamaihd.net/ugc/784111175456702019/FA82EEB8C8BEF311A2E8370602C39200ACB2C1F2/?imw=512&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false';
 const JOSEPH_SRC = 'https://static.jojowiki.com/images/9/9f/JosephAvAnim3.png';
 const epsteinAttachment: MessageAttachment = {
-  id: 'id',
+  _id: '_id',
   file_id: 'file_id',
   message_id: 'message_id',
   original_name: 'Epstein_files.pdf',
@@ -21,7 +21,7 @@ const epsteinAttachment: MessageAttachment = {
 
 const mockUsers: User[] = [
   {
-    id: '1',
+    _id: '1',
     username: 'the_world_stops',
     username_lower: 'the_world_stops',
     display_name: 'DIO Brando',
@@ -31,7 +31,7 @@ const mockUsers: User[] = [
     created_at: '2024-01-15T10:30:00Z',
   },
   {
-    id: '2',
+    _id: '2',
     username: 'steel_ball_run',
     username_lower: 'steel_ball_run',
     display_name: 'Gyro Zeppeli',
@@ -41,7 +41,7 @@ const mockUsers: User[] = [
     created_at: '2024-02-20T14:45:00Z',
   },
   {
-    id: '3',
+    _id: '3',
     username: 'joestar_legacy',
     username_lower: 'joestar_legacy',
     display_name: 'Joseph Joestar',
@@ -54,7 +54,7 @@ const mockUsers: User[] = [
 
 const jojoMessages: Message[] = [
   {
-    id: '1',
+    _id: '1',
     chat_id: '101',
     sender_id: '201',
     content: "Hey, what's up?",
@@ -71,7 +71,7 @@ const jojoMessages: Message[] = [
     sender_avatar: DIO_SRC,
   },
   {
-    id: '2',
+    _id: '2',
     chat_id: '101',
     sender_id: '301',
     content: "Hey Dio! I'm doing well, thanks. How about you?",
@@ -89,7 +89,7 @@ const jojoMessages: Message[] = [
     sender_avatar: GYRO_SRC,
   },
   {
-    id: '3',
+    _id: '3',
     chat_id: '102',
     sender_id: '401',
     content: 'Hey Dio! This is a test message.',
@@ -111,7 +111,7 @@ const jojoMessages: Message[] = [
 // ============ MOCK CHATS ============
 const mockChats: Chat[] = [
   {
-    id: 'chat_1',
+    _id: 'chat_1',
     type: 'private',
     partecipants: ['1', '3'], // DIO e Joseph
     disappearing_timer: null,
@@ -119,7 +119,7 @@ const mockChats: Chat[] = [
     avatar: DIO_SRC,
     participant_details: [mockUsers[0], mockUsers[2]],
     last_message: {
-      id: 'msg_1',
+      _id: 'msg_1',
       chat_id: 'chat_1',
       sender_id: '1',
       content: 'WRYYYYYYY!',
@@ -132,7 +132,7 @@ const mockChats: Chat[] = [
     },
   },
   {
-    id: 'chat_2',
+    _id: 'chat_2',
     type: 'group',
     partecipants: ['1', '2', '3'],
     disappearing_timer: 5, // 5 minuti
@@ -140,7 +140,7 @@ const mockChats: Chat[] = [
     avatar: 'https://via.placeholder.com/150?text=JoJo+Squad',
     participant_details: mockUsers,
     last_message: {
-      id: 'msg_2',
+      _id: 'msg_2',
       chat_id: 'chat_2',
       sender_id: '2',
       content: 'Spinning is justice!',

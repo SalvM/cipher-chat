@@ -12,7 +12,7 @@ export interface AuthResponse {
 export interface LoginResponse {
   token: string;
   user: {
-    id: ID;
+    _id: ID;
     username: string;
     display_name: string;
     avatar?: string;

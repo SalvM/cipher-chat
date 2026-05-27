@@ -53,7 +53,7 @@ export const NewChatDialog = ({
 
   const handleStart = async () => {
     if (!suggestion) return;
-    onCreated(suggestion.id);
+    onCreated(suggestion._id);
     closeDialog();
   };
 

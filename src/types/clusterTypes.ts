@@ -3,7 +3,7 @@ import type { User } from '@/types/userTypes';
 import type { ID, Timestamp } from '@/types/utilityTypes';
 
 export interface Cluster {
-  id: ID;
+  _id: ID;
   name: string;
   description?: string;
   owner_id: ID;
@@ -29,7 +29,7 @@ export interface SendClusterMessageResponse {
 }
 
 export interface Topic {
-  id: ID;
+  _id: ID;
   name: string;
   description?: string;
   created_at: Timestamp;

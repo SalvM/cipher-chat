@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PlusIcon } from 'lucide-react';
@@ -20,6 +19,8 @@ import MessageBubble from '@/components/Chat/MessageBubble';
 import { DIO_SRC, GYRO_SRC, jojoMessages, JOSEPH_SRC } from '@/utils/mockUtils';
 import { ChatReplyPreview } from '@/components/Chat/ChatReplyPreview';
 import { NewChatDialog } from '@/components/Chat/NewChatDialog';
+import { ChatSidebar } from '@/components/Chat/ChatSidebar';
+import { Button } from '@/components/ui/button';
 
 // ── Showcase section wrapper ───────────────────────────────────
 
@@ -194,7 +195,7 @@ export default function HomePage() {
           <ScrollArea>
             {messages.map((message, index) => (
               <MessageBubble
-                key={message.id}
+                key={message._id}
                 message={message}
                 isOwn={message.sender_id === '3'}
                 showAvatar={
@@ -225,6 +226,13 @@ export default function HomePage() {
             uploadDisabled={false}
             handleTyping={() => null}
           />
+        </div>
+      </Section>
+
+
+      {/*  ── Chat Dashboard ──  */}
+      <Section title="ChatDashboard">
+        <div className='flex w-full h-screen'>
         </div>
       </Section>
 

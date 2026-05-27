@@ -100,7 +100,7 @@ export const ChatHeader = ({
 
             {/*
           <DropdownMenuItem
-            onClick={() => other?.id && blockUser(other.id)}
+            onClick={() => other?._id && blockUser(other._id)}
             className="text-red-400"
           >
             <Ban className="w-4 h-4 mr-2" />
