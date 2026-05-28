@@ -65,7 +65,8 @@ router.get("/:cluster_id", authenticate, async (req, res) => {
           "-password_hash -recovery_hash",
         ).lean();
         if (user) {
-          user.status = websocketManager.userStatus.get(mid) || user.status;
+          user.status =
+            websocketManager.userStatus.get(mid.toString()) || user.status;
         }
         return user;
       }),

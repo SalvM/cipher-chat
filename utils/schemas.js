@@ -20,6 +20,7 @@ const chatSchema = new mongoose.Schema({
   disappearing_timer: Number,
   created_at: { type: Date, default: Date.now },
 });
+chatSchema.index({ participants: 1 }, { unique: true });
 
 const messageSchema = new mongoose.Schema({
   content: String,
@@ -44,8 +45,10 @@ const messageSchema = new mongoose.Schema({
   ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date, index: true },
+  expires_at: { type: Date },
 });
+messageSchema.index({ chat_id: 1, created_at: -1 }); // findOne last message per chat
+messageSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 }); // TTL
 
 const clusterSchema = new mongoose.Schema({
   name: String,
@@ -62,6 +65,7 @@ const clusterSchema = new mongoose.Schema({
   ],
   created_at: { type: Date, default: Date.now },
 });
+clusterSchema.index({ members: 1 });
 
 const clusterMessageSchema = new mongoose.Schema({
   content: String,
@@ -91,14 +95,19 @@ const clusterMessageSchema = new mongoose.Schema({
   ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date, index: true },
+  expires_at: { type: Date },
 });
+clusterMessageSchema.index({ cluster_id: 1, created_at: -1 });
+clusterMessageSchema.index({ topic_id: 1, created_at: -1 }); // query for topic
+clusterMessageSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 }); // TTL
 
 const invitationSchema = new mongoose.Schema({
   cluster_id: { type: mongoose.Schema.Types.ObjectId, ref: "Cluster" },
   created_at: { type: Date, default: Date.now },
   expires_at: { type: Date, default: Date.now },
 });
+invitationSchema.index({ cluster_id: 1 });
+invitationSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
 export {
   userSchema,

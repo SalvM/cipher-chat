@@ -41,7 +41,7 @@ router.get("/:invitation_id", authenticate, async (req, res) => {
       .then((memberDetail) => {
         if (memberDetail) {
           memberDetail.status =
-            websocketManager.userStatus.get(req.user._id) ||
+            websocketManager.userStatus.get(req.user._id.toString()) ||
             memberDetail.status;
         }
         return memberDetail;

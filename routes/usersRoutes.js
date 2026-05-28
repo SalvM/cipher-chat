@@ -9,17 +9,26 @@ router.get("/search", authenticate, async (req, res) => {
   try {
     const { q } = req.query;
 
+    if (!q || typeof q !== "string" || q.trim().length < 2) {
+      return res.status(400).json({ error: "Query too short" });
+    }
+
     const user = await User.findOne(
-      { username_lower: q.toLowerCase() },
-      "-password_hash -recovery_hash",
+      { username_lower: q.trim().toLowerCase() },
+      "_id username display_name avatar status",
     ).lean();
 
     if (!user) {
       return res.json({ users: [] });
     }
 
-    // Add real-time status
-    user.status = websocketManager.userStatus.get(user._id) || user.status;
+    user.status =
+      websocketManager.userStatus.get(user._id.toString()) ?? user.status;
+
+    // Non restituire se stessi
+    if (user._id.equals(req.user._id)) {
+      return res.json({ users: [] });
+    }
 
     res.json({ users: [user] });
   } catch (err) {
@@ -53,14 +62,15 @@ router.get("/:user_id", authenticate, async (req, res) => {
   try {
     const user = await User.findOne(
       { _id: req.params.user_id },
-      "-password_hash -recovery_hash",
+      "_id username display_name avatar status",
     ).lean();
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    user.status = websocketManager.userStatus.get(user._id) || user.status;
+    user.status =
+      websocketManager.userStatus.get(user._id.toString()) ?? user.status;
 
     res.json(user);
   } catch (err) {

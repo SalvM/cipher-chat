@@ -8,16 +8,15 @@ const router = express.Router();
 
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { recipient_username } = req.body;
+    const { recipient_id } = req.body;
 
-    if (!recipient_username || typeof recipient_username !== "string") {
+    if (!recipient_id || typeof recipient_id !== "string") {
       return res.status(400).json({ error: "Invalid recipient" });
     }
 
-    const recipient = await User.findOne(
-      { username_lower: recipient_username.toLowerCase() },
-      "_id username display_name avatar status blocked_users",
-    ).lean();
+    const recipient = await User.findById(recipient_id)
+      .select("_id username display_name avatar status blocked_users")
+      .lean();
 
     if (!recipient) {
       return res.status(404).json({ error: "User not found" });
@@ -44,17 +43,23 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(403).json({ error: "You have blocked this user" });
     }
 
-    const chat = await Chat.findOneAndUpdate(
-      {
-        participants: { $all: [req.user._id, recipient._id], $size: 2 },
-      },
-      {
-        $setOnInsert: {
-          participants: [req.user._id, recipient._id],
-        },
-      },
-      { upsert: true, new: true, lean: true },
-    );
+    let chat = await Chat.findOne({
+      participants: { $all: [req.user._id, recipient._id], $size: 2 },
+    }).lean();
+    if (!chat) {
+      try {
+        chat = (
+          await Chat.create({
+            participants: [req.user._id, recipient._id],
+          })
+        ).toObject();
+      } catch (err) {
+        if (err.code !== 11000) throw err; // 11000 = Race condition error
+        chat = await Chat.findOne({
+          participants: { $all: [req.user._id, recipient._id], $size: 2 },
+        }).lean();
+      }
+    }
 
     const response = {
       ...chat,
@@ -185,11 +190,11 @@ router.get("/", authenticate, async (req, res) => {
               },
             },
           ],
-          as: "other_user",
+          as: "otherUser",
         },
       },
       // Flatten to object instead of array, since there is always exactly one result
-      { $unwind: { path: "$other_user", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
 
       { $unset: "sort_time" },
     ]);
@@ -197,12 +202,12 @@ router.get("/", authenticate, async (req, res) => {
     // Overlay real-time status from websocketManager (not available inside aggregation)
     const enriched = chats.map((chat) => ({
       ...chat,
-      other_user: chat.other_user
+      otherUser: chat.otherUser
         ? {
-            ...chat.other_user,
+            ...chat.otherUser,
             status:
-              websocketManager.userStatus.get(chat.other_user._id.toString()) ??
-              chat.other_user.status,
+              websocketManager.userStatus.get(chat.otherUser._id.toString()) ??
+              chat.otherUser.status,
           }
         : null,
     }));
