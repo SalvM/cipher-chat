@@ -1,12 +1,15 @@
+import { ChatMessageFeed } from "@/components/Chat/ChatMessageFeed";
 import { ChatSidebar } from "@/components/Chat/ChatSidebar"
 import { useAuthStore } from "@/stores/authStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useEffect } from "react";
 
 export default function ChatPage() {
-  const { chats, clusters, selectedChatId, selectedClusterId, selectedTab, setSelectedChatId, setSelectedClusterId, setSelectedTab, fetchChats, fetchClusters, createChat } = useConversationStore()
-  const { logout } = useAuthStore()
-
+  const {
+    chats, clusters, selectedChatId, selectedClusterId, selectedTab,
+    setSelectedChatId, setSelectedClusterId, setSelectedTab, fetchChats, fetchClusters, createChat
+  } = useConversationStore()
+  const { user, setUser, logout } = useAuthStore()
 
   const handleChatSelected = (chatId: string, isCluster: boolean) => {
     if (isCluster) {
@@ -20,6 +23,19 @@ export default function ChatPage() {
     fetchChats()
     fetchClusters()
   }, [])
+
+  useEffect(() => {
+    if (user?._id) return;
+    try {
+      const localUser = localStorage.getItem('user')
+      if (!localUser) return;
+      const localUserJson = JSON.parse(localUser)
+      setUser(localUserJson)
+    } catch (e) {
+      console.error(e)
+      return;
+    }
+  }, [user?._id])
 
   return (
     <div className="flex min-h-screen flex-row items-center justify-center bg-base">
@@ -35,8 +51,27 @@ export default function ChatPage() {
         onLogout={logout}
       />
       <div className="flex flex-1 flex-col px-4 py-12 sm:px-6 lg:px-8">
-        <h2>Chat</h2>
-        <p>Lorem ipsum dolor sit amet, consectetur adip.</p>
+        {/* Private chat feed 1-1 */}
+        {
+          selectedTab === 'chat' && selectedChatId && user?._id &&
+          (
+            <>
+              <ChatMessageFeed chatId={selectedChatId} userId={user._id} onReact={() => null} />
+            </>
+          )
+        }
+
+        {/* Cluster chat feed */}
+        {/*
+        {
+          selectedTab === 'cluster' && selectedClusterId && selectedTopicId && user?._id &&
+          (
+            <>
+              <ClusterMessageFeed clusterId={selectedClusterId} topicId={selectedTopicId} userId={user._id} onReact={() => null} />
+            </>
+          )
+        }
+        */}
       </div>
     </div>
   );

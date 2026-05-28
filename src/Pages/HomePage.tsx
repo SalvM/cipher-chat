@@ -217,7 +217,7 @@ export default function HomePage() {
         />
         <div className="flex w-full flex-col gap-3">
           <ChatInput
-            handleSendMessage={(message, file) => {
+            onSendMessage={(message, file) => {
               console.log(message);
               setFilePreview(file);
             }}

@@ -15,13 +15,10 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import ReactionPicker from './ReactionPicker';
 import type { Emoji, Message as GlobalMessage } from '@/types/messageTypes';
-import type { ClusterMessage } from '@/types/clusterTypes';
-import type { ID, ReactionAction } from '@/types/utilityTypes';
+import type { AnyMessage, ID, ReactionAction } from '@/types/utilityTypes';
 import { Avatar } from '@/components/ui/avatar';
 import { Tooltip } from '../ui/tooltip';
 import ChatAttachment from './ChatAttachment';
-
-type AnyMessage = GlobalMessage | ClusterMessage;
 
 // Type guard
 const isGlobalMessage = (message: AnyMessage): message is GlobalMessage => {
@@ -35,7 +32,7 @@ interface MessageBubbleProps {
   onEdit?: (messageId: ID, content: string) => void;
   onDelete?: (messageId: ID) => void;
   onReply?: (message: AnyMessage) => void;
-  onReact: (messageId: ID, emoji: string, action: ReactionAction) => void;
+  onReact: (messageId: ID, emoji: Emoji, action: ReactionAction) => void;
   currentUserId: ID;
   isCluster?: boolean;
 }
@@ -166,7 +163,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               className={`
               px-4 py-2.5 
               ${isOwn && !isCluster
-                  ? 'bg-primary text-primary-fg rounded-l-2xl rounded-tr-2xl rounded-br-md'
+                  ? 'bg-primary text-text-primary rounded-l-2xl rounded-tr-2xl rounded-br-md'
                   : 'bg-surface text-text-primary rounded-r-2xl rounded-tl-2xl rounded-bl-md'
                 }
             `}
@@ -185,7 +182,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             {/* Reactions */}
             {reactionsArray.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {reactionsArray.map(({ emoji, count, reacted }) => (
+                {reactionsArray.map(({ emoji, count, reacted }: any) => (
                   <button
                     key={emoji}
                     onClick={() =>

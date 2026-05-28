@@ -44,6 +44,16 @@ export const useConversationStore = create<
     if (!clusterId) return null;
     return get().clusters[clusterId];
   },
+  getCurrenctConversation: () => {
+    switch (get().selectedTab) {
+      case 'chat':
+        return get().getCurrentChat();
+      case 'cluster':
+        return get().getCurrentCluster();
+      default:
+        return [];
+    }
+  },
   setSelectedChatId: (chatId: string | null) =>
     set({
       selectedChatId: chatId,

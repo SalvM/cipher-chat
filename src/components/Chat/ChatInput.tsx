@@ -1,18 +1,18 @@
 import { Send } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRef, useState } from 'react';
 import FileInput from '../Common/FileInput';
 import { ChatFilePreview } from './ChatFilePreview';
+import { Button } from '@/components/ui/button';
 
 export interface ChatInputProps {
-  handleSendMessage: (message: string, file: File | null) => void;
+  onSendMessage: (message: string, file: File | null) => void;
   isUploading: boolean;
   uploadDisabled: boolean;
   handleTyping: () => void;
 }
 export const ChatInput = ({
-  handleSendMessage,
+  onSendMessage,
   isUploading,
   uploadDisabled,
   handleTyping,
@@ -34,7 +34,7 @@ export const ChatInput = ({
 
       <div className="p-2 border-t border-white/5 w-full rounded-md border bg-elevated font-sans text-text-primary">
         <form
-          onSubmit={() => handleSendMessage(messageInput?.trim(), selectedFile)}
+          onSubmit={(e) => { e.preventDefault(); onSendMessage(messageInput?.trim(), selectedFile) }}
           className="max-w-3xl mx-auto flex items-center gap-3"
         >
           <FileInput disabled={uploadDisabled} onFileChange={setSelectedFile} />

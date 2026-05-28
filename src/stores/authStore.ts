@@ -90,16 +90,18 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         const { token, user } = responseData;
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', token);
+          const authUser = parseUserFromAPI(user);
+          localStorage.setItem('user', JSON.stringify(authUser));
           set({
             token,
-            user: parseUserFromAPI(user),
+            user: authUser,
             isLoading: false,
             isAuthenticated: true,
           });
         }
         return { success: true };
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Login failed';
+        const message = error.response?.data?.detail ?? 'Login failed';
         return { success: false, error: message };
       }
     },

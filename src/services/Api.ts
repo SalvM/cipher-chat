@@ -38,7 +38,7 @@ const api = (async <T = unknown>(
   }
 
   const res = await fetch(`${API_URL}${path}`, {
-    ...opts,
+    method: opts.method ?? 'GET',
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
