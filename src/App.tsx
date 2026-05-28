@@ -3,12 +3,13 @@ import './App.css';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { Toaster } from "sonner"
 
 import HomePage from '@/Pages/HomePage';
 import NotFoundPage from '@/Pages/NotFoundPage';
-import LoginPage from './Pages/LoginPage';
-import ChatPage from './Pages/ChatPage';
-import { AuthGuard } from './Pages/guards/AuthGuard';
+import LoginPage from '@/Pages/LoginPage';
+import ChatPage from '@/Pages/ChatPage';
+import { AuthGuard } from '@/Pages/guards/AuthGuard';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ function App() {
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      <Toaster />
     </QueryClientProvider>
   );
 }

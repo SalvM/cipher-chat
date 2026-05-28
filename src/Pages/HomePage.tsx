@@ -19,7 +19,6 @@ import MessageBubble from '@/components/Chat/MessageBubble';
 import { DIO_SRC, GYRO_SRC, jojoMessages, JOSEPH_SRC } from '@/utils/mockUtils';
 import { ChatReplyPreview } from '@/components/Chat/ChatReplyPreview';
 import { NewChatDialog } from '@/components/Chat/NewChatDialog';
-import { ChatSidebar } from '@/components/Chat/ChatSidebar';
 import { Button } from '@/components/ui/button';
 
 // ── Showcase section wrapper ───────────────────────────────────

@@ -1,44 +1,35 @@
-import React, { useMemo, useState, type SubmitEventHandler } from 'react';
+import { useMemo, useState, type SubmitEventHandler } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { useAuthStore } from '@/stores/authStore';
-import { toast } from 'sonner';
 import { Navigate } from 'react-router';
-
-type AuthMode = 'login' | 'register' | 'recover';
+import { useAuth, type AuthMode } from '@/hooks/useAuth';
 
 const AuthForm = () => {
     const [authMode, setAuthMode] = useState<AuthMode>('login');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const { register, login, isAuthenticated } = useAuthStore();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
         displayName: '',
-        recoveryPhrase: '',
-        newPassword: '',
     });
+
+    const { isAuthenticated, handleLogin, handleRegister } = useAuth();
+
     const formText = useMemo(() => {
         switch (authMode) {
             case 'login':
-                return {
-                    title: 'Welcome Back',
-                    description: 'Sign in to continue to Cipher Chat',
-                };
+                return { title: 'Welcome Back', description: 'Sign in to continue to Cipher Chat' };
             case 'register':
-                return {
-                    title: 'Create Account',
-                    description: 'Start your private messaging journey',
-                };
+                return { title: 'Create Account', description: 'Start your private messaging journey' };
             default:
                 return { title: '', description: '' };
         }
     }, [authMode]);
 
     if (isAuthenticated) {
-        return (<Navigate replace to="/chat" />)
+        return <Navigate replace to="/chat" />;
     }
 
     const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (e) => {
@@ -46,25 +37,16 @@ const AuthForm = () => {
         setIsLoading(true);
 
         if (authMode === 'login') {
-            const result = await login(formData.username, formData.password);
-            if (result.success) {
-                toast.success('Welcome back!');
-            } else {
-                toast.error(result.error || 'Login failed');
-            }
+            await handleLogin({ username: formData.username, password: formData.password });
         } else if (authMode === 'register') {
-            const result = await register(
-                formData.username,
-                formData.password,
-                formData.displayName
-            );
-            if (result.success) {
-                toast.success('Account created!');
-                setAuthMode('login');
-            } else {
-                toast.error(result.error || 'Registration failed');
-            }
+            const success = await handleRegister({
+                username: formData.username,
+                password: formData.password,
+                displayName: formData.displayName,
+            });
+            if (success) setAuthMode('login');
         }
+
         setIsLoading(false);
     };
 
@@ -91,17 +73,12 @@ const AuthForm = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6 sm:px-8 sm:py-8">
-                {/* Username Field */}
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-text-primary">
-                        Username
-                    </label>
+                    <label className="block text-sm font-medium text-text-primary">Username</label>
                     <Input
                         type="text"
                         value={formData.username}
-                        onChange={(e) =>
-                            setFormData({ ...formData, username: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                         placeholder="Enter your username"
                         required
                         data-testid="username-input"
@@ -109,18 +86,13 @@ const AuthForm = () => {
                     />
                 </div>
 
-                {/* Display Name Field - Register Only */}
                 {authMode === 'register' && (
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-text-primary">
-                            Display Name
-                        </label>
+                        <label className="block text-sm font-medium text-text-primary">Display Name</label>
                         <Input
                             type="text"
                             value={formData.displayName}
-                            onChange={(e) =>
-                                setFormData({ ...formData, displayName: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                             placeholder="How others will see you"
                             data-testid="display-name-input"
                             disabled={isLoading}
@@ -128,24 +100,15 @@ const AuthForm = () => {
                     </div>
                 )}
 
-                {/* Password Field */}
                 {(authMode === 'login' || authMode === 'register') && (
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-text-primary">
-                            Password
-                        </label>
+                        <label className="block text-sm font-medium text-text-primary">Password</label>
                         <div className="relative">
                             <Input
                                 type={showPassword ? 'text' : 'password'}
                                 value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, password: e.target.value })
-                                }
-                                placeholder={
-                                    authMode === 'register'
-                                        ? 'Min 8 characters'
-                                        : 'Enter your password'
-                                }
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                placeholder={authMode === 'register' ? 'Min 8 characters' : 'Enter your password'}
                                 required
                                 minLength={authMode === 'register' ? 8 : undefined}
                                 data-testid="password-input"
@@ -158,23 +121,13 @@ const AuthForm = () => {
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
                                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
-                                {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                ) : (
-                                    <Eye className="h-4 w-4" />
-                                )}
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* Submit Button */}
-                <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                    data-testid="auth-submit-btn"
-                >
+                <Button type="submit" className="w-full" disabled={isLoading} data-testid="auth-submit-btn">
                     {isLoading ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-white" />
                     ) : (

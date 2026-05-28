@@ -14,10 +14,12 @@ interface ChatSidebarProps {
     selectedTab: ChatType;
     selectedChatId: string | null;
     selectedClusterId: string | null;
+    onCreateChat: (userId: string) => void;
     onSelectChat: (chatId: string, isCluster: boolean) => void;
     onTabChange: (chatType: ChatType) => void;
+    onLogout: () => void;
 }
-export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, selectedClusterId, onSelectChat, onTabChange }: ChatSidebarProps) => {
+export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, selectedClusterId, onCreateChat, onSelectChat, onTabChange, onLogout }: ChatSidebarProps) => {
     const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
 
     return (
@@ -52,6 +54,12 @@ export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, sele
             <div className="flex-1 overflow-y-auto">
                 {selectedTab === 'chat' && (
                     <div className="flex flex-col gap-2 p-3">
+                        <Button onClick={() => setNewChatDialogOpen(true)}>New direct chat</Button>
+                        <NewChatDialog
+                            dialogOpen={newChatDialogOpen}
+                            closeDialog={() => setNewChatDialogOpen(false)}
+                            onCreated={onCreateChat}
+                        />
                         {chats.map((chat) => (
                             <ChatUserItem
                                 key={chat._id}
@@ -78,23 +86,16 @@ export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, sele
                 )}
             </div>
 
-            <Button onClick={() => setNewChatDialogOpen(true)}>New Chat</Button>
-            <NewChatDialog
-                dialogOpen={newChatDialogOpen}
-                closeDialog={() => setNewChatDialogOpen(false)}
-                onCreated={console.log}
-            />
-
             {/* Footer */}
             <div className="border-t border-border-strong p-3">
                 <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-ghost-hover text-ghost-fg hover:text-ghost-fg-hover transition-colors" title="Profilo">
+                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-ghost-hover text-ghost-fg hover:text-ghost-fg-hover transition-colors" title="Profile">
                         <User size={18} />
                     </button>
-                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-ghost-hover text-ghost-fg hover:text-ghost-fg-hover transition-colors" title="Impostazioni">
+                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-ghost-hover text-ghost-fg hover:text-ghost-fg-hover transition-colors" title="Settings">
                         <Settings size={18} />
                     </button>
-                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-danger-subtle text-danger transition-colors" title="Logout">
+                    <button className="flex-1 flex items-center justify-center p-2.5 rounded-lg hover:bg-danger-subtle text-danger transition-colors" title="Logout" onClick={onLogout}>
                         <LogOut size={18} />
                     </button>
                 </div>

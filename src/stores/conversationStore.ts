@@ -21,6 +21,7 @@ interface ConversationStoreActions {
   setSelectedClusterId: (clusterId: string | null) => void;
   fetchChats: () => void;
   fetchClusters: () => void;
+  createChat: (userId: string) => void;
 }
 
 export const useConversationStore = create<
@@ -30,7 +31,7 @@ export const useConversationStore = create<
   clusters: {},
   selectedChatId: null,
   selectedClusterId: null,
-  selectedTab: 'chat',
+  selectedTab: 'chat' as ChatType,
   isLoading: false,
 
   getCurrentChat: () => {
@@ -79,6 +80,25 @@ export const useConversationStore = create<
       set({ clusters });
     } catch (e) {
       console.error('[fetchClusters]', e);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  createChat: async (userId) => {
+    set({ isLoading: true });
+    try {
+      const responseData = await api.post<Chat>('/chats', {
+        body: { recipient_id: userId },
+      });
+      if (!responseData || !responseData._id) throw responseData;
+      set({
+        chats: { ...get().chats, [responseData._id]: responseData },
+        selectedChatId: responseData._id,
+        selectedTab: 'chat',
+      });
+    } catch (e) {
+      console.error('[createChat]', e);
     } finally {
       set({ isLoading: false });
     }
