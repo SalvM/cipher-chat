@@ -64,7 +64,6 @@ router.post("/", authenticate, async (req, res) => {
     await message.save();
 
     const messageObj = message.toObject();
-    delete messageObj._id;
 
     await websocketManager.broadcastToChat(
       SocketEvents.NEW_MESSAGE,
@@ -108,7 +107,8 @@ router.put("/:message_id", authenticate, async (req, res) => {
       await websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_EDITED,
         {
-          _id: message._id,
+          chat_id: chat._id,
+          message_id: message._id,
           content,
           edited_at: new Date(),
         },
@@ -155,8 +155,8 @@ router.delete("/:message_id", authenticate, async (req, res) => {
       await websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_DELETED,
         {
-          _id: message._id,
-          chat_id: message.chat_id,
+          chat_id: chat._id,
+          message_id: message._id,
         },
         chat.participants,
       );
@@ -198,6 +198,7 @@ router.post("/:message_id/reactions", authenticate, async (req, res) => {
     await websocketManager.broadcastToChat(
       SocketEvents.MESSAGE_REACTION,
       {
+        chat_id: message.chat_id,
         message_id: message._id,
         emoji,
         user_id: req.user._id,
@@ -244,7 +245,8 @@ router.delete(
       await websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_REACTION,
         {
-          _id: message._id,
+          chat_id: message.chat_id,
+          message_id: message._id,
           emoji,
           user_id: req.user._id,
           action: "remove",
@@ -302,7 +304,6 @@ router.post(
       await message.save();
 
       const messageObj = message.toObject();
-      delete messageObj._id;
 
       await websocketManager.broadcastToChat(
         SocketEvents.NEW_MESSAGE,

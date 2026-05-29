@@ -118,7 +118,6 @@ io.use((socket, next) => {
   try {
     const payload = verifyToken(token);
     socket.userId = payload.user_id;
-    // console.log('Socket assigned userId:', socket.userId);
     next();
   } catch (err) {
     next(new Error("Authentication error"));
@@ -127,17 +126,15 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const userId = socket.userId;
-
   websocketManager.connect(socket, userId);
 
   socket.on("message", async (data) => {
-    console.log(">>", data.type, userId);
     if (data.type === "typing") {
-      await websocketManager.broadcastTyping(
+      await websocketManager.broadcastTyping({
         userId,
-        data.chat_id,
-        data.is_typing,
-      );
+        chatId: data.chatId,
+        isTyping: data.isTyping,
+      });
     } else if (data.type === "status") {
       await User.updateOne({ _id: userId }, { $set: { status: data.status } });
       if (data.status !== "invisible") {
@@ -147,7 +144,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on(SocketEvents.USER_TYPING, async (data) => {
-    await websocketManager.broadcastTyping(userId, data.chatId, data.isTyping);
+    // console.log("[ws] USER_TYPING", { ...data, userId });
+    await websocketManager.broadcastTyping({
+      userId,
+      chatId: data.chatId,
+      isTyping: data.isTyping,
+    });
   });
 
   socket.on("disconnect", () => {

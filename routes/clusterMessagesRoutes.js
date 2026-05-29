@@ -52,11 +52,14 @@ router.post("/", authenticate, async (req, res) => {
     await clusterMessage.save();
 
     const messageObj = clusterMessage.toObject();
-    delete messageObj._id;
 
     await websocketManager.broadcastToChat(
       SocketEvents.CLUSTER_MESSAGE,
-      messageObj,
+      {
+        cluster_id,
+        topic_id,
+        message: messageObj,
+      },
       cluster.members,
     );
 
@@ -96,7 +99,9 @@ router.put("/:message_id", authenticate, async (req, res) => {
       await websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_EDITED,
         {
-          _id: message._id,
+          cluster_id: message.cluster_id,
+          topic_id: message.topic_id,
+          message_id: message._id,
           content,
           edited_at: new Date(),
         },
@@ -146,7 +151,8 @@ router.delete("/:message_id", authenticate, async (req, res) => {
       await websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_DELETED,
         {
-          _id: message._id,
+          message_id: message._id,
+          topic_id: message.topic_id,
           cluster_id: message.cluster_id,
         },
         cluster.members,
@@ -189,6 +195,8 @@ router.post("/:message_id/reactions", authenticate, async (req, res) => {
     await websocketManager.broadcastToChat(
       SocketEvents.CLUSTER_MESSAGE_REACTION,
       {
+        cluster_id: message.cluster_id,
+        topic_id: message.topic_id,
         message_id: message._id,
         emoji,
         user_id: req.user._id,
@@ -235,7 +243,9 @@ router.delete(
       await websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_REACTION,
         {
-          _id: message._id,
+          cluster_id: message.cluster_id,
+          topic_id: message.topic_id,
+          message_id: message._id,
           emoji,
           user_id: req.user._id,
           action: "remove",
@@ -293,11 +303,13 @@ router.post(
       await message.save();
 
       const messageObj = message.toObject();
-      delete messageObj._id;
 
       await websocketManager.broadcastToChat(
         SocketEvents.NEW_MESSAGE,
-        messageObj,
+        {
+          cluster_id,
+          message: messageObj,
+        },
         cluster.members,
       );
 

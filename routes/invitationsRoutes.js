@@ -51,7 +51,7 @@ router.get("/:invitation_id", authenticate, async (req, res) => {
         websocketManager.broadcastToChat(
           SocketEvents.USER_JOINED_CLUSTER,
           {
-            _id: req.user._id,
+            user_id: req.user._id,
             cluster_id: cluster._id,
             memberDetail,
           },

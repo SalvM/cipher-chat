@@ -9,7 +9,7 @@ class ConnectionManager {
   }
 
   async connect(socket, userId) {
-    console.log(">> Connection - userId:", userId);
+    //console.log(">> Connection - userId:", userId);
     this.activeConnections.set(userId, socket);
     this.userStatus.set(userId, "online");
     await this.broadcastStatus(userId, "online");
@@ -22,20 +22,25 @@ class ConnectionManager {
   }
 
   async sendPersonalMessage(userId, eventType, eventContent) {
+    //console.log("[sendPersonalMessage]", { userId, eventType, eventContent });
     const socket = this.activeConnections.get(userId);
 
     if (socket) {
       socket.emit(eventType, eventContent);
-      console.log("<<", userId, eventType);
+      // console.log("<<", userId, eventType);
     } else {
       console.error(`Socket not found for user ${userId}`);
     }
   }
 
   async broadcastToChat(eventType, eventContent, participants) {
-    // console.log('broadcastToChat()', { eventType, eventContent, participants })
+    //console.log("broadcastToChat", { eventType, eventContent, participants });
     for (const userId of participants) {
-      await this.sendPersonalMessage(userId, eventType, eventContent);
+      await this.sendPersonalMessage(
+        userId.toString(),
+        eventType,
+        eventContent,
+      );
     }
   }
 
@@ -47,7 +52,7 @@ class ConnectionManager {
       for (const participant of chat.participants) {
         if (participant !== userId && !notified.has(participant)) {
           await this.sendPersonalMessage(
-            participant,
+            participant.toString(),
             SocketEvents.STATUS_UPDATE,
             {
               user_id: userId,
@@ -60,21 +65,20 @@ class ConnectionManager {
     }
   }
 
-  async broadcastTyping(userId, chatId, isTyping) {
+  async broadcastTyping({ userId, chatId, isTyping }) {
     const chat = await Chat.findById(chatId).lean();
-    if (chat) {
-      for (const participant of chat.participants) {
-        if (participant !== userId) {
-          await this.sendPersonalMessage(
-            participant,
-            SocketEvents.USER_TYPING,
-            {
-              user_id: userId,
-              chat_id: chatId,
-              is_typing: isTyping,
-            },
-          );
-        }
+
+    if (!chat) return;
+    for (const participant of chat.participants) {
+      if (participant.toString() !== userId) {
+        await this.sendPersonalMessage(
+          participant.toString(),
+          SocketEvents.USER_TYPING,
+          {
+            chat_id: chatId,
+            is_typing: isTyping,
+          },
+        );
       }
     }
   }
