@@ -64,7 +64,7 @@
   }
 
   p {
-    color: theme(--color-text-secondary);
+    color: theme(--color-text-primary);
     line-height: 1.6;
   }
 

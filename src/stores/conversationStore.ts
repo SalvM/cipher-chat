@@ -1,7 +1,8 @@
 import api from '@/services/Api';
 import type { Chat } from '@/types/chatTypes';
 import type { Cluster } from '@/types/clusterTypes';
-import type { ChatType } from '@/types/utilityTypes';
+import type { Message } from '@/types/messageTypes';
+import type { ChatType, ID } from '@/types/utilityTypes';
 import { create } from 'zustand';
 
 interface ConversationStore {
@@ -10,6 +11,8 @@ interface ConversationStore {
   selectedChatId: string | null;
   selectedClusterId: string | null;
   selectedTab: ChatType;
+  typingInCurrentChat: boolean; // true if otherUser is typing
+  typingInCurrentTopic: Record<ID, boolean>; // [userId]: true/false
   isLoading: boolean;
 }
 
@@ -19,9 +22,13 @@ interface ConversationStoreActions {
   setSelectedTab: (chatType: ChatType) => void;
   setSelectedChatId: (chatId: string | null) => void;
   setSelectedClusterId: (clusterId: string | null) => void;
+  isSelectedChatId: (chatId: ID) => boolean;
   fetchChats: () => void;
   fetchClusters: () => void;
   createChat: (userId: string) => void;
+  setChatLastMessage: (message: Message) => void;
+  setLoading: (loading: boolean) => void;
+  setTypingInChat: (isTyping: boolean) => void;
 }
 
 export const useConversationStore = create<
@@ -32,6 +39,8 @@ export const useConversationStore = create<
   selectedChatId: null,
   selectedClusterId: null,
   selectedTab: 'chat' as ChatType,
+  typingInCurrentChat: false,
+  typingInCurrentTopic: {},
   isLoading: false,
 
   getCurrentChat: () => {
@@ -57,13 +66,16 @@ export const useConversationStore = create<
   setSelectedChatId: (chatId: string | null) =>
     set({
       selectedChatId: chatId,
+      typingInCurrentChat: false,
     }),
   setSelectedClusterId: (clusterId: string | null) =>
     set({
       selectedClusterId: clusterId,
     }),
   setSelectedTab: (tab: ChatType) => set({ selectedTab: tab }),
-
+  isSelectedChatId: (chatId: ID) => {
+    return get().selectedChatId === chatId;
+  },
   fetchChats: async () => {
     set({ isLoading: true });
     try {
@@ -113,4 +125,22 @@ export const useConversationStore = create<
       set({ isLoading: false });
     }
   },
+
+  setChatLastMessage: (message) => {
+    const chat = get().chats[message.chat_id ?? ''];
+    if (!chat) return;
+    set({
+      chats: {
+        ...get().chats,
+        [message.chat_id]: {
+          ...chat,
+          last_message: message,
+        },
+      },
+    });
+  },
+
+  setLoading: (loading: boolean) => set({ isLoading: loading }),
+  setTypingInChat: (isTyping: boolean) =>
+    set({ typingInCurrentChat: isTyping }),
 }));

@@ -29,7 +29,7 @@ export const ClusterItem = ({
                     {name}
                 </p>
                 <p className="text-xs text-text-secondary truncate">
-                    {memberCount} membri
+                    {memberCount} members
                 </p>
             </div>
         </button>

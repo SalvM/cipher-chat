@@ -163,16 +163,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               className={`
               px-4 py-2.5 
               ${isOwn && !isCluster
-                  ? 'bg-primary text-text-primary rounded-l-2xl rounded-tr-2xl rounded-br-md'
-                  : 'bg-surface text-text-primary rounded-r-2xl rounded-tl-2xl rounded-bl-md'
+                  ? 'bg-primary rounded-l-2xl rounded-tr-2xl rounded-br-md'
+                  : 'bg-secondary rounded-r-2xl rounded-tl-2xl rounded-bl-md'
                 }
             `}
             >
-              <p className="text-sm whitespace-pre-wrap wrap-break-word">
+              <p className={`text-sm whitespace-pre-wrap wrap-break-word ${isOwn && !isCluster ? 'text-primary-fg' : 'text-secondary-fg'}`}>
                 {message.content}
               </p>
               {message.edited && (
-                <span className="text-xs opacity-60 ml-1">(edited)</span>
+                <span className={`text-xs opacity-60 ml-1 ${isOwn && !isCluster ? 'text-primary-fg' : 'text-secondary-fg'}`}>(edited)</span>
               )}
               {message.attachments?.map((attachment, i) => (
                 <ChatAttachment key={i} attachment={attachment} />

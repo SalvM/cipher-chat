@@ -1,4 +1,4 @@
-const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API_URL } from '@/utils';
 
 interface ApiError {
   status: number;

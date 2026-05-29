@@ -25,7 +25,7 @@ const ReactionPicker = ({ onSelect, children }: ReactionPickerProps) => {
               <button
                 key={emoji}
                 onClick={() => onSelect(emoji)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-overlay transition-colors text-lg"
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-text-muted transition-colors text-lg"
               >
                 {emoji}
               </button>

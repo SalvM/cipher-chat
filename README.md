@@ -42,6 +42,7 @@ app/
   hooks/         # useSocket, useMessages, …
   Pages/         # Main route pages
   services/      # Third part APIs, our BE APIs
+  hooks/          # Custom hooks
   stores/         # zustand stores
   types/         # typescript types declarations
 ```

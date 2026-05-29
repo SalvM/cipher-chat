@@ -1,7 +1,7 @@
 import api from '@/services/Api';
 import { create } from 'zustand';
 
-import type { ID } from '@/types/utilityTypes';
+import type { ID, Status, Timestamp } from '@/types/utilityTypes';
 import type { Emoji, Message } from '@/types/messageTypes';
 import type {
   ChatLoadingMessages,
@@ -27,14 +27,14 @@ interface ChatMessageStore {
     chatId: ID,
     content: string,
     replyToId?: ID
-  ) => GenericApiResponse;
+  ) => GenericApiResponse; // Send a new message from form submit
 
   sendMessageWithAttachment: (
     chatId: ID,
     content: string,
     file: Blob,
     replyToId?: ID
-  ) => GenericApiResponse;
+  ) => GenericApiResponse; // ... with attachment
 
   editMessage: (
     chatId: ID,
@@ -46,18 +46,32 @@ interface ChatMessageStore {
 
   addReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
   removeReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
-  updateMessageReaction: (
-    chatId: ID,
-    messageId: ID,
-    emoji: Emoji,
-    userId: ID,
-    action: 'add' | 'remove'
-  ) => void;
-  // Cleaaning (for LRU futuro)
+
+  // Cleaaning (for LRU)
   // clearChat: (chatId: ID) => void;
 }
 
-export const useChatMessageStore = create<ChatMessageStore>((set, get) => ({
+interface ChatMessageStoreWSActions {
+  addMessageFromWs: (message: Message) => void; // Add a message from WS
+  updateMessageFromWs: (messageUpdated: {
+    chatId: ID;
+    messageId: ID;
+    updates: Partial<Message>;
+    edited_at: Timestamp;
+  }) => void;
+  removeMessageFromWs: (chatId: ID, messageId: ID) => void;
+  updateMessageReactionFromWS: (messageReaction: {
+    chatId: ID;
+    messageId: ID;
+    emoji: Emoji;
+    userId: ID;
+    action: 'add' | 'remove';
+  }) => void;
+}
+
+export const useChatMessageStore = create<
+  ChatMessageStore & ChatMessageStoreWSActions
+>((set, get) => ({
   messages: {},
   loadingMessages: {},
 
@@ -136,12 +150,16 @@ export const useChatMessageStore = create<ChatMessageStore>((set, get) => ({
 
   editMessage: async (chatId, messageId, content) => {
     try {
+      const existing = get().messages[chatId];
+      if (!existing) throw existing;
       await api.put(`/messages/${messageId}`, { body: { content } });
       set({
-        ...get().messages,
-        [chatId]: {
-          ...get().messages[chatId],
-          [messageId]: { ...get().messages[chatId][messageId], content },
+        messages: {
+          ...get().messages,
+          [chatId]: {
+            ...existing,
+            [messageId]: { ...existing[messageId], content },
+          },
         },
       });
       return { success: true };
@@ -155,8 +173,10 @@ export const useChatMessageStore = create<ChatMessageStore>((set, get) => ({
 
   deleteMessage: async (chatId, messageId) => {
     try {
+      const existing = get().messages[chatId];
+      if (!existing) throw existing;
       await api.delete(`/messages/${messageId}`);
-      const chat = { ...get().messages[chatId] };
+      const chat = { ...existing };
       delete chat[messageId];
       set({ messages: { ...get().messages, [chatId]: chat } });
       return { success: true };
@@ -195,9 +215,60 @@ export const useChatMessageStore = create<ChatMessageStore>((set, get) => ({
     }
   },
 
-  // FE calls it after WS update
-  updateMessageReaction: (chatId, messageId, emoji, userId, action) => {
-    const message = { ...get().messages[chatId][messageId] };
+  // WebSocket updates
+  addMessageFromWs: (message: Message) => {
+    const chatId = message?.chat_id ?? null;
+    if (!chatId) return;
+    const chatMessages = get().messages[chatId];
+    if (!chatMessages) return;
+    set({
+      messages: {
+        ...get().messages,
+        [chatId]: { ...chatMessages, [message._id]: message },
+      },
+    });
+  },
+  updateMessageFromWs: ({ chatId, messageId, updates, edited_at }) => {
+    const chatMessages = get().messages[chatId];
+    if (!chatMessages) return;
+    set({
+      messages: {
+        ...get().messages,
+        [chatId]: {
+          ...get().messages[chatId],
+          [messageId]: {
+            ...get().messages[chatId][messageId],
+            ...updates,
+            edited_at,
+          },
+        },
+      },
+    });
+  },
+  removeMessageFromWs: (chatId, messageId) => {
+    const existing = get().messages[chatId];
+    if (!existing) return;
+    const chatMessages = { ...existing };
+    delete chatMessages[messageId];
+    set({
+      messages: {
+        ...get().messages,
+        [chatId]: chatMessages,
+      },
+    });
+  },
+  updateMessageReactionFromWS: ({
+    chatId,
+    messageId,
+    emoji,
+    userId,
+    action,
+  }) => {
+    const chatMessages = get().messages[chatId];
+    if (!chatMessages) return;
+    const existingMessage = get().messages[chatId][messageId];
+    if (!existingMessage) return;
+    const message = { ...existingMessage };
     const reactions = { ...message.reactions };
     if (action === 'add') {
       reactions[emoji] = [...(reactions[emoji] || []), userId];
@@ -210,7 +281,7 @@ export const useChatMessageStore = create<ChatMessageStore>((set, get) => ({
       messages: {
         ...get().messages,
         [chatId]: {
-          ...get().messages[chatId],
+          ...chatMessages,
           [messageId]: message,
         },
       },

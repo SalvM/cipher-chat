@@ -31,7 +31,7 @@ export interface Message {
   reactions: MessageReactions | null;
   attachments: MessageAttachment[];
   created_at: Timestamp;
-  updated_at: Timestamp;
+  edited_at: Timestamp;
 
   // Populated from joins
   sender_username?: string;

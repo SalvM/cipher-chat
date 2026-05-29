@@ -1,5 +1,6 @@
 import { ChatMessageFeed } from "@/components/Chat/ChatMessageFeed";
 import { ChatSidebar } from "@/components/Chat/ChatSidebar"
+import { useSocket } from "@/hooks/useSocket";
 import { useAuthStore } from "@/stores/authStore";
 import { useConversationStore } from "@/stores/conversationStore";
 import { useEffect } from "react";
@@ -10,6 +11,8 @@ export default function ChatPage() {
     setSelectedChatId, setSelectedClusterId, setSelectedTab, fetchChats, fetchClusters, createChat
   } = useConversationStore()
   const { user, setUser, logout } = useAuthStore()
+
+  useSocket();
 
   const handleChatSelected = (chatId: string, isCluster: boolean) => {
     if (isCluster) {
@@ -50,7 +53,7 @@ export default function ChatPage() {
         onTabChange={setSelectedTab}
         onLogout={logout}
       />
-      <div className="flex flex-1 flex-col px-4 py-12 sm:px-6 lg:px-8">
+      <div className="flex flex-1 flex-col min-h-screen max-h-screen">
         {/* Private chat feed 1-1 */}
         {
           selectedTab === 'chat' && selectedChatId && user?._id &&
