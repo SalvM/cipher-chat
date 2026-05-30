@@ -58,9 +58,7 @@ export default function ChatPage() {
         {
           selectedTab === 'chat' && selectedChatId && user?._id &&
           (
-            <>
-              <ChatMessageFeed chatId={selectedChatId} userId={user._id} onReact={() => null} />
-            </>
+            <ChatMessageFeed chatId={selectedChatId} userId={user._id} />
           )
         }
 

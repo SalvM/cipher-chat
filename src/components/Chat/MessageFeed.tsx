@@ -10,7 +10,6 @@ interface MessageFeedProps {
     isLoading: boolean;
     onEdit: (messageId: ID, content: string) => void;
     onDelete: (messageId: ID) => void;
-    onReact: (messageId: ID, emoji: Emoji, action: 'add' | 'remove') => void;
     addReaction: (messageId: ID, emoji: Emoji) => void;
     removeReaction: (messageId: ID, emoji: Emoji) => void;
     onReply?: (message: AnyMessage) => void;
@@ -36,8 +35,8 @@ export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, r
 
     return (
         <>
-            <ScrollArea className="flex-1 p-6">
-                <div className="max-w-3xl mx-auto flex flex-col">
+            <ScrollArea className="flex-1 p-6 scroll-auto overflow-y-auto scroll-y-auto">
+                <div className="max-w-3xl mx-auto flex flex-col ">
                     {messages?.map((message, index) => (
                         <MessageBubble
                             key={message._id}

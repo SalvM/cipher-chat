@@ -7,7 +7,7 @@ interface ApiError {
 
 interface ApiOptions {
   method?: string;
-  body?: unknown;
+  body?: any;
   headers?: Record<string, string>;
 }
 
@@ -27,20 +27,25 @@ const api = (async <T = unknown>(
   const headers = opts.headers || {};
 
   const token = localStorage.getItem('token');
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const isFormData = opts.body instanceof FormData;
 
   if (
-    ['POST', 'PUT', 'PATCH'].includes((opts.method ?? 'GET')?.toUpperCase())
+    ['POST', 'PUT', 'PATCH'].includes((opts.method ?? 'GET')?.toUpperCase()) &&
+    !isFormData
   ) {
-    headers['Content-Type'] = 'application/json';
+    headers['Content-Type'] ??= 'application/json';
   }
 
   const res = await fetch(`${API_URL}${path}`, {
     method: opts.method ?? 'GET',
     headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    body: isFormData
+      ? opts.body
+      : opts.body
+        ? JSON.stringify(opts.body)
+        : undefined,
   });
 
   if (!res.ok) {

@@ -1,5 +1,5 @@
 import api from '@/services/Api';
-import type { Chat } from '@/types/chatTypes';
+import type { Chat, ChatInputField } from '@/types/chatTypes';
 import type { Cluster } from '@/types/clusterTypes';
 import type { Message } from '@/types/messageTypes';
 import type { ChatType, ID } from '@/types/utilityTypes';
@@ -27,6 +27,7 @@ interface ConversationStoreActions {
   fetchClusters: () => void;
   createChat: (userId: string) => void;
   setChatLastMessage: (message: Message) => void;
+  setChatInputField: (chatId: ID, chatInputField: ChatInputField) => void;
   setLoading: (loading: boolean) => void;
   setTypingInChat: (isTyping: boolean) => void;
 }
@@ -135,6 +136,23 @@ export const useConversationStore = create<
         [message.chat_id]: {
           ...chat,
           last_message: message,
+        },
+      },
+    });
+  },
+
+  setChatInputField: (chatId: ID, chatInputField: ChatInputField) => {
+    const chat = get().chats[chatId];
+    if (!chat) return;
+    set({
+      chats: {
+        ...get().chats,
+        [chatId]: {
+          ...chat,
+          chatInputField: {
+            ...chat.chatInputField,
+            ...chatInputField,
+          },
         },
       },
     });

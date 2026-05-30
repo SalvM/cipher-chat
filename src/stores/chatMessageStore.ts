@@ -1,7 +1,7 @@
 import api from '@/services/Api';
 import { create } from 'zustand';
 
-import type { ID, Status, Timestamp } from '@/types/utilityTypes';
+import type { ID, Timestamp } from '@/types/utilityTypes';
 import type { Emoji, Message } from '@/types/messageTypes';
 import type {
   ChatLoadingMessages,
@@ -135,7 +135,6 @@ export const useChatMessageStore = create<
       }
 
       await api.post<Message>('/messages/with-attachment', {
-        headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
       });
 

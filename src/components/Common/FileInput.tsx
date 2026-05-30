@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Paperclip } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FileInputProps {
   onFileChange: (value: React.SetStateAction<File | null>) => void;

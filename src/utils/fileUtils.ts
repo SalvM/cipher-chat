@@ -7,4 +7,4 @@ export const formatFileSize = (bytes: any) => {
 export const getFileUrl = (fileId: string | number) =>
   `${import.meta.env.VITE_BACKEND_URL}/api/files/${fileId}`;
 
-export const isImageFile = (attachment: any) => attachment.is_image;
+export const isImageFile = (attachment: any) => attachment?.is_image;

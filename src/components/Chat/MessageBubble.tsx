@@ -191,8 +191,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                     className={`
                       inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors
                       ${reacted
-                        ? 'bg-primary-subtle border border-primary-active'
-                        : 'bg-secondary-subtle border border-border hover:bg-secondary-hover'
+                        ? 'bg-primary-subtle border border-primary-active hover:bg-primary-hover hover:text-text-primary'
+                        : 'bg-secondary-subtle border border-border hover:bg-primary-active hover:border-primary hover:text-text-primary'
                       }
                     `}
                   >
