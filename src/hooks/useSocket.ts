@@ -15,8 +15,12 @@ export const useSocket = () => {
     updateMessageReactionFromWS,
     removeMessageFromWs,
   } = useChatMessageStore();
-  const { isSelectedChatId, setChatLastMessage, setTypingInChat } =
-    useConversationStore();
+  const {
+    isSelectedChatId,
+    setChatLastMessage,
+    setTypingInChat,
+    setChatSettings,
+  } = useConversationStore();
 
   useEffect(() => {
     if (!token || !user?._id) return;
@@ -64,6 +68,14 @@ export const useSocket = () => {
     const onUserTyping = (data: { chat_id: string; is_typing: boolean }) => {
       if (!isSelectedChatId(data.chat_id)) return;
       setTypingInChat(data.is_typing);
+    };
+    const onChatSettingsUpdated = (data: {
+      chat_id: string;
+      updated_by: string;
+      settings: { disappearing_timer: number };
+    }) => {
+      if (!isSelectedChatId(data.chat_id)) return;
+      setChatSettings(data.chat_id, data.settings.disappearing_timer);
     };
 
     /* CLUSTER CODE to be refactored
@@ -120,6 +132,8 @@ export const useSocket = () => {
     socket.on('message_deleted', onMessageDeleted);
     socket.on('message_reaction', onMessageReaction);
     socket.on('user_typing', onUserTyping);
+    socket.on('chat_settings_updated', onChatSettingsUpdated);
+
     /*
     socket.on('cluster_message', onClusterMessage);
     socket.on('cluster_message_edited', onClusterMessageEdited);
@@ -127,9 +141,7 @@ export const useSocket = () => {
     socket.on('cluster_message_reaction', onClusterMessageReaction);
     socket.on('user_joined_cluster', onUserJoinedCluster);
     socket.on('user_left_cluster', onUserLeftCluster);
-
-    
-*/
+    */
 
     console.info('[useSocket] ready to skyrocket!');
 

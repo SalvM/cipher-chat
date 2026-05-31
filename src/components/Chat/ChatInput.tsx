@@ -1,25 +1,30 @@
 import { Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRef, useState, type SubmitEventHandler } from 'react';
-import FileInput from '../Common/FileInput';
+import FileInput from '@/components/Common/FileInput';
 import { ChatFilePreview } from './ChatFilePreview';
 import { Button } from '@/components/ui/button';
+import TimerSelector from '@/components/Common/TimerSelector';
 
 export interface ChatInputProps {
   disabled: boolean;
-  defaultInputValue?: string;
+  initialValue?: string;
   onBlur?: (message: string) => void;
+  onTimerChange?: (minutes: number) => void;
   onSendMessage: (message: string, file: File | null) => void;
   handleTyping: (isTyping: boolean) => void;
+  chatDisappearingMinutes?: number | null;
 }
 export const ChatInput = ({
   disabled,
   onBlur,
   onSendMessage,
+  onTimerChange,
   handleTyping,
-  defaultInputValue
+  initialValue,
+  chatDisappearingMinutes,
 }: ChatInputProps) => {
-  const [messageInput, setMessageInput] = useState(defaultInputValue ?? '');
+  const [messageInput, setMessageInput] = useState(initialValue ?? '');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,15 +33,16 @@ export const ChatInput = ({
     handleTyping(e.target.value?.length > 0);
   };
 
-  const handleInputBlur = () => onBlur?.(messageInput.trim())
+  const handleInputBlur = () => onBlur?.(messageInput.trim());
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
     onSendMessage(messageInput?.trim(), selectedFile);
-    setMessageInput('')
-    setSelectedFile(null)
-    handleTyping(false)
-  }
+    setMessageInput('');
+    setSelectedFile(null);
+    handleTyping(false);
+  };
+
   return (
     <>
       <ChatFilePreview
@@ -49,6 +55,12 @@ export const ChatInput = ({
           onSubmit={handleSubmit}
           className="max-w-3xl mx-auto flex items-center gap-3"
         >
+          {onTimerChange && (
+            <TimerSelector
+              initialValue={chatDisappearingMinutes}
+              onChange={onTimerChange}
+            />
+          )}
           <FileInput disabled={disabled} onFileChange={setSelectedFile} />
 
           <Input

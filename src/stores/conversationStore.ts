@@ -6,10 +6,10 @@ import type { ChatType, ID } from '@/types/utilityTypes';
 import { create } from 'zustand';
 
 interface ConversationStore {
-  chats: Record<string, Chat>;
-  clusters: Record<string, Cluster>;
-  selectedChatId: string | null;
-  selectedClusterId: string | null;
+  chats: Record<ID, Chat>;
+  clusters: Record<ID, Cluster>;
+  selectedChatId: ID | null;
+  selectedClusterId: ID | null;
   selectedTab: ChatType;
   typingInCurrentChat: boolean; // true if otherUser is typing
   typingInCurrentTopic: Record<ID, boolean>; // [userId]: true/false
@@ -20,14 +20,15 @@ interface ConversationStoreActions {
   getCurrentChat: () => Chat | null;
   getCurrentCluster: () => Cluster | null;
   setSelectedTab: (chatType: ChatType) => void;
-  setSelectedChatId: (chatId: string | null) => void;
-  setSelectedClusterId: (clusterId: string | null) => void;
+  setSelectedChatId: (chatId: ID | null) => void;
+  setSelectedClusterId: (clusterId: ID | null) => void;
   isSelectedChatId: (chatId: ID) => boolean;
   fetchChats: () => void;
   fetchClusters: () => void;
-  createChat: (userId: string) => void;
+  createChat: (userId: ID) => void;
   setChatLastMessage: (message: Message) => void;
   setChatInputField: (chatId: ID, chatInputField: ChatInputField) => void;
+  setChatSettings: (chatId: ID, disappearingMinutes: number) => void;
   setLoading: (loading: boolean) => void;
   setTypingInChat: (isTyping: boolean) => void;
 }
@@ -156,6 +157,37 @@ export const useConversationStore = create<
         },
       },
     });
+  },
+
+  setChatSettings: async (chatId: ID, disappearingMinutes: number) => {
+    console.log('setChatSettings', { chatId, disappearingMinutes });
+    const chat = get().chats[chatId];
+    if (!chat) return;
+
+    set({ isLoading: true });
+    try {
+      const responseData = await api.put<{ disappearing_timer: number }>(
+        `/chats/${chatId}/settings`,
+        {
+          body: { disappearing_timer: disappearingMinutes },
+        }
+      );
+      if (!responseData) throw responseData;
+      const { disappearing_timer } = responseData;
+      set({
+        chats: {
+          ...get().chats,
+          [chatId]: {
+            ...chat,
+            disappearing_timer,
+          },
+        },
+      });
+    } catch (e) {
+      console.error('[setChatSettings]', e);
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),

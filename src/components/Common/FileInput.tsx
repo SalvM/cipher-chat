@@ -4,8 +4,8 @@ import { Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface FileInputProps {
-  onFileChange: (value: React.SetStateAction<File | null>) => void;
   disabled: boolean;
+  onFileChange: (value: React.SetStateAction<File | null>) => void;
 }
 const FileInput = ({ disabled, onFileChange }: FileInputProps) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
