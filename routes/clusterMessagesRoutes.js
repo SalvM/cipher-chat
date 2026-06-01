@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import { join } from "path";
 import express from "express";
-import { User, Cluster, ClusterMessage } from "../utils/db.js";
+import { Cluster, ClusterMessage } from "../utils/db.js";
 
 import SocketEvents from "../socketEvents.js";
 import websocketManager from "../websocket.js";
@@ -14,30 +14,36 @@ const router = express.Router();
 router.post("/", authenticate, async (req, res) => {
   try {
     const { content, cluster_id, topic_id, reply_to } = req.body;
-    if (content === undefined || content.length === 0) return res.status(501);
+
+    if (!content?.trim()) {
+      return res.status(400).json({ error: "Content is required" });
+    }
 
     const cluster = await Cluster.findOne({
       _id: cluster_id,
-      members: { $in: [req.user._id] },
+      members: req.user._id,
     }).lean();
 
     if (!cluster) {
       return res.status(404).json({ error: "Cluster not found" });
     }
-    const topicExists = cluster.topics.some((t) => t._id === topic_id);
+
+    const topicExists = cluster.topics.some((t) => t._id.equals(topic_id));
     if (!topicExists) {
       return res.status(404).json({ error: "Topic not found" });
     }
 
     let replyToContent = null;
     if (reply_to) {
-      const replyMsg = await ClusterMessage.findOne({ _id: reply_to }).lean();
+      const replyMsg = await ClusterMessage.findById(reply_to)
+        .select("sender_display_name content")
+        .lean();
       if (replyMsg) {
         replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, 100)}`;
       }
     }
 
-    const clusterMessage = new ClusterMessage({
+    const clusterMessage = await ClusterMessage.create({
       content,
       sender_id: req.user._id,
       sender_username: req.user.username,
@@ -49,21 +55,15 @@ router.post("/", authenticate, async (req, res) => {
       reply_to_content: replyToContent,
     });
 
-    await clusterMessage.save();
-
     const messageObj = clusterMessage.toObject();
 
-    await websocketManager.broadcastToChat(
+    websocketManager.broadcastToChat(
       SocketEvents.CLUSTER_MESSAGE,
-      {
-        cluster_id,
-        topic_id,
-        message: messageObj,
-      },
+      { cluster_id, topic_id, message: messageObj },
       cluster.members,
     );
 
-    res.json(messageObj);
+    res.status(201).json(messageObj);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -73,47 +73,37 @@ router.post("/", authenticate, async (req, res) => {
 router.put("/:message_id", authenticate, async (req, res) => {
   try {
     const { content } = req.body;
+    const edited_at = new Date();
 
-    const message = await ClusterMessage.findOne({
-      _id: req.params.message_id,
-      sender_id: req.user._id,
-    }).lean();
+    const message = await ClusterMessage.findOneAndUpdate(
+      { _id: req.params.message_id, sender_id: req.user._id },
+      { $set: { content, edited: true, edited_at } },
+      { lean: true },
+    );
 
     if (!message) {
       return res.status(404).json({ error: "Message not found" });
     }
 
-    await ClusterMessage.updateOne(
-      { _id: message._id },
-      {
-        $set: {
-          content,
-          edited: true,
-          edited_at: new Date(),
-        },
-      },
-    );
+    const cluster = await Cluster.findById(message.cluster_id)
+      .select("members")
+      .lean();
 
-    const cluster = await Cluster.findOne({ _id: message.cluster_id }).lean();
     if (cluster) {
-      await websocketManager.broadcastToChat(
+      websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_EDITED,
         {
           cluster_id: message.cluster_id,
           topic_id: message.topic_id,
           message_id: message._id,
           content,
-          edited_at: new Date(),
+          edited_at,
         },
         cluster.members,
       );
     }
 
-    res.json({
-      _id: message._id,
-      content,
-      edited: true,
-    });
+    res.json({ _id: message._id, content, edited: true, edited_at });
   } catch (err) {
     console.error(
       `Error processing message update for ${req.params.message_id}:`,
@@ -125,7 +115,7 @@ router.put("/:message_id", authenticate, async (req, res) => {
 
 router.delete("/:message_id", authenticate, async (req, res) => {
   try {
-    const message = await ClusterMessage.findOne({
+    const message = await ClusterMessage.findOneAndDelete({
       _id: req.params.message_id,
       sender_id: req.user._id,
     }).lean();
@@ -134,21 +124,18 @@ router.delete("/:message_id", authenticate, async (req, res) => {
       return res.status(404).json({ error: "Message not found" });
     }
 
-    // Delete attachments
-    for (const attachment of message.attachments || []) {
-      const filePath = join(UPLOAD_DIR, attachment.file_id);
-      try {
-        await fs.unlink(filePath);
-      } catch (err) {
-        console.error("Failed to delete file:", err);
-      }
-    }
+    await Promise.allSettled(
+      (message.attachments ?? []).map((attachment) =>
+        fs.unlink(join(UPLOAD_DIR, attachment.file_id)),
+      ),
+    );
 
-    await ClusterMessage.deleteOne({ _id: message._id });
+    const cluster = await Cluster.findById(message.cluster_id)
+      .select("members")
+      .lean();
 
-    const cluster = await Cluster.findOne({ _id: message.cluster_id }).lean();
     if (cluster) {
-      await websocketManager.broadcastToChat(
+      websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_DELETED,
         {
           message_id: message._id,
@@ -167,32 +154,39 @@ router.delete("/:message_id", authenticate, async (req, res) => {
 });
 
 // ClusterMessage Reactions
+async function getMessageAndCluster(messageId, userId) {
+  const message = await ClusterMessage.findById(messageId)
+    .select("cluster_id topic_id")
+    .lean();
+  if (!message) return { message: null, cluster: null };
+
+  const cluster = await Cluster.findOne({
+    _id: message.cluster_id,
+    members: userId,
+  })
+    .select("members")
+    .lean();
+
+  return { message, cluster };
+}
+
 router.post("/:message_id/reactions", authenticate, async (req, res) => {
   try {
     const { emoji } = req.body;
+    const { message, cluster } = await getMessageAndCluster(
+      req.params.message_id,
+      req.user._id,
+    );
 
-    const message = await ClusterMessage.findOne({
-      _id: req.params.message_id,
-    }).lean();
-    if (!message) {
-      return res.status(404).json({ error: "Message not found" });
-    }
-
-    const cluster = await Cluster.findOne({
-      _id: message.cluster_id,
-      members: { $in: req.user._id },
-    }).lean();
-
-    if (!cluster) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
+    if (!message) return res.status(404).json({ error: "Message not found" });
+    if (!cluster) return res.status(403).json({ error: "Not authorized" });
 
     await ClusterMessage.updateOne(
       { _id: message._id },
       { $addToSet: { [`reactions.${emoji}`]: req.user._id } },
     );
 
-    await websocketManager.broadcastToChat(
+    websocketManager.broadcastToChat(
       SocketEvents.CLUSTER_MESSAGE_REACTION,
       {
         cluster_id: message.cluster_id,
@@ -218,29 +212,20 @@ router.delete(
   async (req, res) => {
     try {
       const { emoji } = req.params;
+      const { message, cluster } = await getMessageAndCluster(
+        req.params.message_id,
+        req.user._id,
+      );
 
-      const message = await ClusterMessage.findOne({
-        _id: req.params.message_id,
-      }).lean();
-      if (!message) {
-        return res.status(404).json({ error: "Message not found" });
-      }
-
-      const cluster = await Cluster.findOne({
-        _id: message.cluster_id,
-        members: { $in: req.user._id },
-      }).lean();
-
-      if (!cluster) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
+      if (!message) return res.status(404).json({ error: "Message not found" });
+      if (!cluster) return res.status(403).json({ error: "Not authorized" });
 
       await ClusterMessage.updateOne(
         { _id: message._id },
         { $pull: { [`reactions.${emoji}`]: req.user._id } },
       );
 
-      await websocketManager.broadcastToChat(
+      websocketManager.broadcastToChat(
         SocketEvents.CLUSTER_MESSAGE_REACTION,
         {
           cluster_id: message.cluster_id,
@@ -261,23 +246,22 @@ router.delete(
   },
 );
 
-// TODO: security checks
 router.post(
   "/with-attachment",
   authenticate,
   upload.single("file"),
   async (req, res) => {
     try {
-      const { content, cluster_id, reply_to } = req.body;
+      const { content, cluster_id, topic_id, reply_to } = req.body;
 
       const cluster = await Cluster.findOne({
         _id: cluster_id,
-        members: { $in: req.user._id },
+        members: req.user._id,
       }).lean();
 
       if (!cluster) {
         await fs.unlink(req.file.path);
-        return res.status(404).json({ error: "Chat not found" });
+        return res.status(404).json({ error: "Cluster not found" });
       }
 
       const attachment = {
@@ -289,31 +273,27 @@ router.post(
         uploaded_at: new Date(),
       };
 
-      const message = new ClusterMessage({
+      const message = await ClusterMessage.create({
         content: content || "",
         sender_id: req.user._id,
         sender_username: req.user.username,
         sender_display_name: req.user.display_name,
         sender_avatar: req.user.avatar,
         cluster_id,
+        topic_id,
         reply_to,
         attachments: [attachment],
       });
 
-      await message.save();
-
       const messageObj = message.toObject();
 
-      await websocketManager.broadcastToChat(
-        SocketEvents.NEW_MESSAGE,
-        {
-          cluster_id,
-          message: messageObj,
-        },
+      websocketManager.broadcastToChat(
+        SocketEvents.CLUSTER_MESSAGE,
+        { cluster_id, topic_id, message: messageObj },
         cluster.members,
       );
 
-      res.json(messageObj);
+      res.status(201).json(messageObj);
     } catch (err) {
       console.error(err);
       if (req.file) {

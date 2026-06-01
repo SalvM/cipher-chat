@@ -16,7 +16,7 @@ import cors from "cors";
 import "./env.js";
 
 // Very cool logger
-import { logStart } from "./startup.js";
+import { logInfo, logStart, logDbOperation } from "./startup.js";
 
 // Project's dependencies
 import SocketEvents from "./socketEvents.js";
@@ -165,18 +165,21 @@ io.on("connection_error", (err) => {
 });
 
 // ===================== Cleanup Task =====================
-setInterval(async () => {
-  try {
-    const result = await Message.deleteMany({
-      expires_at: { $ne: null, $lt: new Date() },
-    });
-    if (result.deletedCount > 0) {
-      console.log(`Cleaned up ${result.deletedCount} expired messages`);
+setInterval(
+  async () => {
+    try {
+      const result = await Message.deleteMany({
+        expires_at: { $ne: null, $lt: new Date() },
+      });
+      if (result.deletedCount > 0) {
+        logDbOperation(`Cleaned up ${result.deletedCount} expired messages`);
+      }
+    } catch (err) {
+      console.error("Error cleaning up expired messages:", err);
     }
-  } catch (err) {
-    console.error("Error cleaning up expired messages:", err);
-  }
-}, 60000);
+  },
+  6 * 60 * 60 * 1000, // 6h
+);
 
 // ===================== Start Server =====================
 httpServer.listen(PORT, () => {

@@ -36,11 +36,7 @@ class ConnectionManager {
   async broadcastToChat(eventType, eventContent, participants) {
     //console.log("broadcastToChat", { eventType, eventContent, participants });
     for (const userId of participants) {
-      await this.sendPersonalMessage(
-        userId.toString(),
-        eventType,
-        eventContent,
-      );
+      this.sendPersonalMessage(userId.toString(), eventType, eventContent);
     }
   }
 
@@ -51,7 +47,7 @@ class ConnectionManager {
     for (const chat of chats) {
       for (const participant of chat.participants) {
         if (participant !== userId && !notified.has(participant)) {
-          await this.sendPersonalMessage(
+          this.sendPersonalMessage(
             participant.toString(),
             SocketEvents.STATUS_UPDATE,
             {
@@ -71,7 +67,7 @@ class ConnectionManager {
     if (!chat) return;
     for (const participant of chat.participants) {
       if (participant.toString() !== userId) {
-        await this.sendPersonalMessage(
+        this.sendPersonalMessage(
           participant.toString(),
           SocketEvents.USER_TYPING,
           {

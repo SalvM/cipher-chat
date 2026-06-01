@@ -1,5 +1,10 @@
 import express from "express";
-import { Chat, Message, User } from "../utils/db.js";
+import {
+  Chat,
+  Message,
+  User,
+  VALID_EXPIRING_MESSAGE_TIMERS,
+} from "../utils/db.js";
 import websocketManager from "../websocket.js";
 import SocketEvents from "../socketEvents.js";
 import { authenticate } from "../utils/auth.js";
@@ -84,45 +89,37 @@ router.put("/:chat_id/settings", authenticate, async (req, res) => {
   try {
     const { disappearing_timer } = req.body;
 
-    const chat = await Chat.findOne({
-      _id: req.params.chat_id,
-      participants: req.user._id,
-    }).lean();
-
-    if (!chat) {
-      return res.status(404).json({ error: "Chat not found" });
-    }
-
-    const validTimers = [0, 5, 30, 60, 1440, 10080];
+    // Timer to expire chat messages. Request Body check.
     if (
-      disappearing_timer !== undefined &&
-      !validTimers.includes(disappearing_timer)
+      disappearing_timer === undefined ||
+      isNaN(disappearing_timer) ||
+      !VALID_EXPIRING_MESSAGE_TIMERS.includes(disappearing_timer)
     ) {
       return res.status(400).json({ error: "Invalid timer value" });
     }
 
-    const updateData = {};
-    if (disappearing_timer !== undefined) {
-      updateData.disappearing_timer =
-        disappearing_timer > 0 ? disappearing_timer : null;
+    const updateData = { disappearing_timer };
+    const updated = await Chat.findOneAndUpdate(
+      { _id: req.params.chat_id, participants: req.user._id },
+      { $set: updateData },
+      { after: true, lean: true },
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Chat not found" });
     }
 
-    if (Object.keys(updateData).length > 0) {
-      await Chat.updateOne({ _id: chat._id }, { $set: updateData });
+    websocketManager.broadcastToChat(
+      SocketEvents.CHAT_SETTINGS_UPDATED,
+      {
+        chat_id: updated._id,
+        settings: updateData,
+        updated_by: req.user._id,
+      },
+      updated.participants,
+    );
 
-      await websocketManager.broadcastToChat(
-        SocketEvents.CHAT_SETTINGS_UPDATED,
-        {
-          chat_id: chat._id,
-          settings: updateData,
-          updated_by: req.user._id,
-        },
-        chat.participants,
-      );
-    }
-
-    const updated = await Chat.findById(chat._id).lean();
-    res.json(updated);
+    res.status(204).json({ updateData });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -223,12 +220,12 @@ router.get("/:chat_id/messages", authenticate, async (req, res) => {
   try {
     const { limit = 50, before } = req.query;
 
-    const chat = await Chat.findOne({
+    const chatExists = await Chat.exists({
       _id: req.params.chat_id,
       participants: req.user._id,
-    }).lean();
+    });
 
-    if (!chat) {
+    if (!chatExists) {
       return res.status(404).json({ error: "Chat not found" });
     }
 
@@ -238,6 +235,9 @@ router.get("/:chat_id/messages", authenticate, async (req, res) => {
     }
 
     const messages = await Message.find(query)
+      .select(
+        "_id chat_id sender_id content attachments reply_to reply_to_content edited edited_at created_at",
+      )
       .sort({ created_at: -1 })
       .limit(parseInt(limit))
       .lean();

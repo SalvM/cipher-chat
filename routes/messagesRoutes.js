@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import { join } from "path";
 import express from "express";
+import mongoose from "mongoose";
 import { Chat, User, Message } from "../utils/db.js";
 
 import SocketEvents from "../socketEvents.js";
@@ -11,26 +12,101 @@ import { authenticate } from "../utils/auth.js";
 
 const router = express.Router();
 
+const REPLY_PREVIEW_LENGTH = 100;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
+}
+
+/**
+ * Checks whether the authenticated user is participating in the chat and returns
+ * the chat itself with a whitelist projection.
+ * A single database call shared by multiple routes.
+ */
+async function findChatForParticipant(chatId, userId) {
+  return Chat.findOne(
+    { _id: chatId, participants: userId },
+    "_id participants disappearing_timer",
+  ).lean();
+}
+
+/**
+ * Checks whether userId is blocked by the other chat participant.
+ * Returns true if the message should be blocked.
+ */
+async function isSenderBlockedByRecipient(chat, senderId) {
+  const otherId = chat.participants.find((p) => !p.equals(senderId));
+  if (!otherId) return false;
+
+  const otherUser = await User.findOne(
+    { _id: otherId },
+    "blocked_users",
+  ).lean();
+
+  return otherUser?.blocked_users?.some((id) => id.equals(senderId)) ?? false;
+}
+
+/**
+ * Creates an attachment object from the file uploaded by multer.
+ */
+function buildAttachment(file) {
+  return {
+    file_id: file.filename,
+    original_name: file.originalname,
+    content_type: file.mimetype,
+    size: file.size,
+    is_image: ALLOWED_IMAGE_TYPES.includes(file.mimetype),
+    uploaded_at: new Date(),
+  };
+}
+
+/**
+ * Saves the message, broadcasts it to participants, and responds to the client.
+ * Logic common to POST / and POST /with-attachment.
+ */
+async function saveAndBroadcast(messageData, chat, res) {
+  const message = await Message.create(data);
+  const messageObj = message.toObject();
+
+  websocketManager.broadcastToChat(
+    SocketEvents.NEW_MESSAGE,
+    messageObj,
+    chat.participants,
+  );
+
+  return messageObj;
+}
+
+// ── Routes ─────────────────────────────────────────────────────────────────
+
+/**
+ * POST /
+ * Send a text message (with a reply, if applicable).
+ */
 router.post("/", authenticate, async (req, res) => {
   try {
     const { content, chat_id, reply_to } = req.body;
-    if (content === undefined || content.length === 0) return res.status(501);
 
-    const chat = await Chat.findOne({
-      _id: chat_id,
-      participants: { $in: [req.user._id] },
-    }).lean();
+    if (
+      !content ||
+      typeof content !== "string" ||
+      content.trim().length === 0
+    ) {
+      return res.status(400).json({ error: "Content is required" });
+    }
 
+    if (!chat_id || !isValidObjectId(chat_id)) {
+      return res.status(400).json({ error: "Invalid chat_id" });
+    }
+
+    const chat = await findChatForParticipant(chat_id, req.user._id);
     if (!chat) {
       return res.status(404).json({ error: "Chat not found" });
     }
 
-    const otherId = chat.participants.find((p) => p !== req.user._id);
-    const otherUser = await User.findOne({ _id: otherId }).lean();
-
-    if (
-      otherUser?.blocked_users?.some((_id) => _id.toString() === req.user._id)
-    ) {
+    if (await isSenderBlockedByRecipient(chat, req.user._id)) {
       return res
         .status(403)
         .json({ error: "Cannot send message to this user" });
@@ -38,164 +114,204 @@ router.post("/", authenticate, async (req, res) => {
 
     let replyToContent = null;
     if (reply_to) {
-      const replyMsg = await Message.findOne({ _id: reply_to }).lean();
+      if (!isValidObjectId(reply_to)) {
+        return res.status(400).json({ error: "Invalid reply_to" });
+      }
+      const replyMsg = await Message.findOne(
+        { _id: reply_to },
+        "sender_display_name content",
+      ).lean();
       if (replyMsg) {
-        replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, 100)}`;
+        replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, REPLY_PREVIEW_LENGTH)}`;
       }
     }
 
-    let expiresAt = null;
-    if (chat.disappearing_timer) {
-      expiresAt = new Date(Date.now() + chat.disappearing_timer * 60000);
-    }
+    const expiresAt = chat.disappearing_timer
+      ? new Date(Date.now() + chat.disappearing_timer * 60_000)
+      : null;
 
-    const message = new Message({
-      content,
-      sender_id: req.user._id,
-      sender_username: req.user.username,
-      sender_display_name: req.user.display_name,
-      sender_avatar: req.user.avatar,
-      chat_id,
-      reply_to,
-      reply_to_content: replyToContent,
-      expires_at: expiresAt,
-    });
-
-    await message.save();
-
-    const messageObj = message.toObject();
-
-    await websocketManager.broadcastToChat(
-      SocketEvents.NEW_MESSAGE,
-      messageObj,
-      chat.participants,
+    const messageObject = await saveAndBroadcast(
+      {
+        content: content.trim(),
+        sender_id: req.user._id,
+        sender_username: req.user.username,
+        sender_display_name: req.user.display_name,
+        sender_avatar: req.user.avatar,
+        chat_id,
+        reply_to: reply_to || undefined,
+        reply_to_content: replyToContent,
+        expires_at: expiresAt,
+      },
+      chat,
+      res,
     );
-
-    res.json(messageObj);
+    res.status(201).json(messageObject);
   } catch (err) {
-    console.error(err);
+    console.error("[messagesRoutes] POST /", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
+/**
+ * PUT /:message_id
+ * Updates the content of an existing message (sender only).
+ */
 router.put("/:message_id", authenticate, async (req, res) => {
   try {
     const { content } = req.body;
 
-    const message = await Message.findOne({
-      _id: req.params.message_id,
-      sender_id: req.user._id,
-    }).lean();
+    if (
+      !content ||
+      typeof content !== "string" ||
+      content.trim().length === 0
+    ) {
+      return res.status(400).json({ error: "Content is required" });
+    }
+
+    if (!isValidObjectId(req.params.message_id)) {
+      return res.status(400).json({ error: "Invalid message_id" });
+    }
+
+    const message = await Message.findOne(
+      { _id: req.params.message_id, sender_id: req.user._id },
+      "_id chat_id",
+    ).lean();
 
     if (!message) {
       return res.status(404).json({ error: "Message not found" });
     }
 
-    await Message.updateOne(
-      { _id: message._id },
-      {
-        $set: {
-          content,
-          edited: true,
-          edited_at: new Date(),
-        },
-      },
-    );
+    const editedAt = new Date();
 
-    const chat = await Chat.findOne({ _id: message.chat_id }).lean();
+    const [chat] = await Promise.all([
+      Chat.findOne({ _id: message.chat_id }, "_id participants").lean(),
+      Message.updateOne(
+        { _id: message._id },
+        {
+          $set: { content: content.trim(), edited: true, edited_at: editedAt },
+        },
+      ),
+    ]);
+
     if (chat) {
-      await websocketManager.broadcastToChat(
+      websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_EDITED,
         {
           chat_id: chat._id,
           message_id: message._id,
-          content,
-          edited_at: new Date(),
+          content: content.trim(),
+          edited_at: editedAt,
         },
         chat.participants,
       );
     }
 
-    res.json({
-      _id: message._id,
-      content,
-      edited: true,
-    });
+    res
+      .status(204)
+      .json({ _id: message._id, content: content.trim(), edited: true });
   } catch (err) {
-    console.error(err);
+    console.error("[messagesRoutes] PUT /:message_id", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
+/**
+ * DELETE /:message_id
+ * Deletes a message and its attachments (sender only).
+ */
 router.delete("/:message_id", authenticate, async (req, res) => {
   try {
-    const message = await Message.findOne({
-      _id: req.params.message_id,
-      sender_id: req.user._id,
-    }).lean();
+    if (!isValidObjectId(req.params.message_id)) {
+      return res.status(400).json({ error: "Invalid message_id" });
+    }
+
+    const message = await Message.findOne(
+      { _id: req.params.message_id, sender_id: req.user._id },
+      "_id chat_id attachments",
+    ).lean();
 
     if (!message) {
       return res.status(404).json({ error: "Message not found" });
     }
 
-    // Delete attachments
-    for (const attachment of message.attachments || []) {
-      const filePath = join(UPLOAD_DIR, attachment.file_id);
-      try {
-        await fs.unlink(filePath);
-      } catch (err) {
-        console.error("Failed to delete file:", err);
-      }
+    // Delete the document and restore the chat simultaneously
+    const [chat] = await Promise.all([
+      Chat.findOne({ _id: message.chat_id }, "_id participants").lean(),
+      Message.deleteOne({ _id: message._id }),
+    ]);
+
+    // Clean up attached files (fire-and-forget: does not block the response)
+    for (const attachment of message.attachments ?? []) {
+      fs.unlink(join(UPLOAD_DIR, attachment.file_id)).catch((err) =>
+        console.error("[messagesRoutes] Failed to delete file:", err),
+      );
     }
 
-    await Message.deleteOne({ _id: message._id });
-
-    const chat = await Chat.findOne({ _id: message.chat_id }).lean();
     if (chat) {
-      await websocketManager.broadcastToChat(
+      websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_DELETED,
-        {
-          chat_id: chat._id,
-          message_id: message._id,
-        },
+        { chat_id: chat._id, message_id: message._id },
         chat.participants,
       );
     }
 
-    res.json({ deleted: true });
+    res.status(204).json({ deleted: true });
   } catch (err) {
-    console.error(err);
+    console.error("[messagesRoutes] DELETE /:message_id", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Message Reactions
+// ── Reactions ──────────────────────────────────────────────────────────────
+
+/**
+ * Common logic for adding/removing reactions: retrieves the message and authorization
+ * in two queries and then updates the data.
+ */
+async function handleReaction(req, res, updateOp) {
+  const { message_id } = req.params;
+
+  if (!isValidObjectId(message_id)) {
+    return res.status(400).json({ error: "Invalid message_id" });
+  }
+
+  const message = await Message.findOne(
+    { _id: message_id },
+    "_id chat_id",
+  ).lean();
+  if (!message) {
+    return res.status(404).json({ error: "Message not found" });
+  }
+
+  const chat = await findChatForParticipant(message.chat_id, req.user._id);
+  if (!chat) {
+    return res.status(403).json({ error: "Not authorized" });
+  }
+
+  await updateOp(message._id);
+
+  return { message, chat };
+}
+
 router.post("/:message_id/reactions", authenticate, async (req, res) => {
   try {
     const { emoji } = req.body;
 
-    const message = await Message.findOne({
-      _id: req.params.message_id,
-    }).lean();
-    if (!message) {
-      return res.status(404).json({ error: "Message not found" });
+    if (!emoji || typeof emoji !== "string") {
+      return res.status(400).json({ error: "Invalid emoji" });
     }
 
-    const chat = await Chat.findOne({
-      _id: message.chat_id,
-      participants: { $in: [req.user._id] },
-    }).lean();
-
-    if (!chat) {
-      return res.status(403).json({ error: "Not authorized" });
-    }
-
-    await Message.updateOne(
-      { _id: message._id },
-      { $addToSet: { [`reactions.${emoji}`]: req.user._id } },
+    const result = await handleReaction(req, res, (msgId) =>
+      Message.updateOne(
+        { _id: msgId },
+        { $addToSet: { [`reactions.${emoji}`]: req.user._id } },
+      ),
     );
+    if (!result) return; // The error response has already been sent
 
-    await websocketManager.broadcastToChat(
+    const { message, chat } = result;
+
+    websocketManager.broadcastToChat(
       SocketEvents.MESSAGE_REACTION,
       {
         chat_id: message.chat_id,
@@ -207,9 +323,9 @@ router.post("/:message_id/reactions", authenticate, async (req, res) => {
       chat.participants,
     );
 
-    res.json({ success: true, emoji });
+    res.status(204).json({ success: true, emoji });
   } catch (err) {
-    console.error(err);
+    console.error("[messagesRoutes] POST /:message_id/reactions", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -221,28 +337,21 @@ router.delete(
     try {
       const { emoji } = req.params;
 
-      const message = await Message.findOne({
-        _id: req.params.message_id,
-      }).lean();
-      if (!message) {
-        return res.status(404).json({ error: "Message not found" });
+      if (!emoji || typeof emoji !== "string") {
+        return res.status(400).json({ error: "Invalid emoji" });
       }
 
-      const chat = await Chat.findOne({
-        _id: message.chat_id,
-        participants: { $in: [req.user._id] },
-      }).lean();
-
-      if (!chat) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
-      await Message.updateOne(
-        { _id: message._id },
-        { $pull: { [`reactions.${emoji}`]: req.user._id } },
+      const result = await handleReaction(req, res, (msgId) =>
+        Message.updateOne(
+          { _id: msgId },
+          { $pull: { [`reactions.${emoji}`]: req.user._id } },
+        ),
       );
+      if (!result) return;
 
-      await websocketManager.broadcastToChat(
+      const { message, chat } = result;
+
+      websocketManager.broadcastToChat(
         SocketEvents.MESSAGE_REACTION,
         {
           chat_id: message.chat_id,
@@ -254,15 +363,23 @@ router.delete(
         chat.participants,
       );
 
-      res.json({ success: true });
+      res.status(204).json({ success: true });
     } catch (err) {
-      console.error(err);
+      console.error(
+        "[messagesRoutes] DELETE /:message_id/reactions/:emoji",
+        err,
+      );
       res.status(500).json({ error: "Server error" });
     }
   },
 );
 
-// TODO: security checks
+// ── With attachment ────────────────────────────────────────────────────────
+
+/**
+ * POST /with-attachment
+ * Sends a message with an attached file.
+ */
 router.post(
   "/with-attachment",
   authenticate,
@@ -271,49 +388,61 @@ router.post(
     try {
       const { content, chat_id, reply_to } = req.body;
 
-      const chat = await Chat.findOne({
-        _id: chat_id,
-        participants: { $in: [req.user._id] },
-      }).lean();
+      if (!chat_id || !isValidObjectId(chat_id)) {
+        if (req.file) await fs.unlink(req.file.path).catch(console.error);
+        return res.status(400).json({ error: "Invalid chat_id" });
+      }
 
+      if (!req.file) {
+        return res.status(400).json({ error: "File is required" });
+      }
+
+      const chat = await findChatForParticipant(chat_id, req.user._id);
       if (!chat) {
-        await fs.unlink(req.file.path);
+        await fs.unlink(req.file.path).catch(console.error);
         return res.status(404).json({ error: "Chat not found" });
       }
 
-      const attachment = {
-        file_id: req.file.filename,
-        original_name: req.file.originalname,
-        content_type: req.file.mimetype,
-        size: req.file.size,
-        is_image: ALLOWED_IMAGE_TYPES.includes(req.file.mimetype),
-        uploaded_at: new Date(),
-      };
+      if (await isSenderBlockedByRecipient(chat, req.user._id)) {
+        await fs.unlink(req.file.path).catch(console.error);
+        return res
+          .status(403)
+          .json({ error: "Cannot send message to this user" });
+      }
 
-      const message = new Message({
-        content: content || "",
-        sender_id: req.user._id,
-        sender_username: req.user.username,
-        sender_display_name: req.user.display_name,
-        sender_avatar: req.user.avatar,
-        chat_id,
-        reply_to,
-        attachments: [attachment],
-      });
+      let replyToContent = null;
+      if (reply_to) {
+        if (!isValidObjectId(reply_to)) {
+          await fs.unlink(req.file.path).catch(console.error);
+          return res.status(400).json({ error: "Invalid reply_to" });
+        }
+        const replyMsg = await Message.findOne(
+          { _id: reply_to },
+          "sender_display_name content",
+        ).lean();
+        if (replyMsg) {
+          replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, REPLY_PREVIEW_LENGTH)}`;
+        }
+      }
 
-      await message.save();
-
-      const messageObj = message.toObject();
-
-      await websocketManager.broadcastToChat(
-        SocketEvents.NEW_MESSAGE,
-        messageObj,
-        chat.participants,
+      const messageObject = await saveAndBroadcast(
+        {
+          content: content ?? "",
+          sender_id: req.user._id,
+          sender_username: req.user.username,
+          sender_display_name: req.user.display_name,
+          sender_avatar: req.user.avatar,
+          chat_id,
+          reply_to: reply_to || undefined,
+          reply_to_content: replyToContent,
+          attachments: [buildAttachment(req.file)],
+        },
+        chat,
+        res,
       );
-
-      res.json(messageObj);
+      res.status(201).json(messageObject);
     } catch (err) {
-      console.error(err);
+      console.error("[messagesRoutes] POST /with-attachment", err);
       if (req.file) {
         await fs.unlink(req.file.path).catch(console.error);
       }
