@@ -85,47 +85,6 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
-router.put("/:chat_id/settings", authenticate, async (req, res) => {
-  try {
-    const { disappearing_timer } = req.body;
-
-    // Timer to expire chat messages. Request Body check.
-    if (
-      disappearing_timer === undefined ||
-      isNaN(disappearing_timer) ||
-      !VALID_EXPIRING_MESSAGE_TIMERS.includes(disappearing_timer)
-    ) {
-      return res.status(400).json({ error: "Invalid timer value" });
-    }
-
-    const updateData = { disappearing_timer };
-    const updated = await Chat.findOneAndUpdate(
-      { _id: req.params.chat_id, participants: req.user._id },
-      { $set: updateData },
-      { after: true, lean: true },
-    );
-
-    if (!updated) {
-      return res.status(404).json({ error: "Chat not found" });
-    }
-
-    websocketManager.broadcastToChat(
-      SocketEvents.CHAT_SETTINGS_UPDATED,
-      {
-        chat_id: updated._id,
-        settings: updateData,
-        updated_by: req.user._id,
-      },
-      updated.participants,
-    );
-
-    res.status(204).json({ updateData });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 router.get("/", authenticate, async (req, res) => {
   try {
     const chats = await Chat.aggregate([
@@ -236,7 +195,7 @@ router.get("/:chat_id/messages", authenticate, async (req, res) => {
 
     const messages = await Message.find(query)
       .select(
-        "_id chat_id sender_id content attachments reply_to reply_to_content edited edited_at created_at",
+        "_id chat_id sender_id content attachments reply_to reply_to_content edited edited_at created_at expires_at",
       )
       .sort({ created_at: -1 })
       .limit(parseInt(limit))

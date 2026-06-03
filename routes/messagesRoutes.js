@@ -28,7 +28,7 @@ function isValidObjectId(id) {
 async function findChatForParticipant(chatId, userId) {
   return Chat.findOne(
     { _id: chatId, participants: userId },
-    "_id participants disappearing_timer",
+    "_id participants",
   ).lean();
 }
 
@@ -67,7 +67,7 @@ function buildAttachment(file) {
  * Logic common to POST / and POST /with-attachment.
  */
 async function saveAndBroadcast(messageData, chat, res) {
-  const message = await Message.create(data);
+  const message = await Message.create(messageData);
   const messageObj = message.toObject();
 
   websocketManager.broadcastToChat(
@@ -88,6 +88,7 @@ async function saveAndBroadcast(messageData, chat, res) {
 router.post("/", authenticate, async (req, res) => {
   try {
     const { content, chat_id, reply_to } = req.body;
+    const disappearing_minutes = parseInt(req.body.disappearing_minutes ?? 0);
 
     if (
       !content ||
@@ -126,9 +127,10 @@ router.post("/", authenticate, async (req, res) => {
       }
     }
 
-    const expiresAt = chat.disappearing_timer
-      ? new Date(Date.now() + chat.disappearing_timer * 60_000)
-      : null;
+    const expiresAt =
+      !isNaN(disappearing_minutes) && disappearing_minutes > 0
+        ? new Date(Date.now() + disappearing_minutes * 60_000)
+        : null;
 
     const messageObject = await saveAndBroadcast(
       {

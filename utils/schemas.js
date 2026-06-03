@@ -17,7 +17,6 @@ const userSchema = new mongoose.Schema({
 
 const chatSchema = new mongoose.Schema({
   participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  disappearing_timer: Number,
   created_at: { type: Date, default: Date.now },
 });
 
@@ -44,7 +43,7 @@ const messageSchema = new mongoose.Schema({
   ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date },
+  expires_at: { type: Date, expires: 0, index: true },
 });
 
 const clusterSchema = new mongoose.Schema({
@@ -91,13 +90,13 @@ const clusterMessageSchema = new mongoose.Schema({
   ],
   reactions: { type: Map, of: [String], default: {} },
   created_at: { type: Date, default: Date.now, index: true },
-  expires_at: { type: Date },
+  expires_at: { type: Date, expires: 0, index: true },
 });
 
 const invitationSchema = new mongoose.Schema({
   cluster_id: { type: mongoose.Schema.Types.ObjectId, ref: "Cluster" },
   created_at: { type: Date, default: Date.now },
-  expires_at: { type: Date, default: Date.now },
+  expires_at: { type: Date, expires: 0, default: Date.now },
 });
 
 export {
