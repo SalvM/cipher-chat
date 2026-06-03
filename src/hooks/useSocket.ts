@@ -72,10 +72,10 @@ export const useSocket = () => {
     const onChatSettingsUpdated = (data: {
       chat_id: string;
       updated_by: string;
-      settings: { disappearing_timer: number };
+      settings: { disappearing_minutes: number };
     }) => {
       if (!isSelectedChatId(data.chat_id)) return;
-      setChatSettings(data.chat_id, data.settings.disappearing_timer);
+      setChatSettings(data.chat_id, data.settings.disappearing_minutes);
     };
 
     /* CLUSTER CODE to be refactored

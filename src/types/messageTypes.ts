@@ -27,13 +27,13 @@ export interface Message {
   reply_to_content?: string;
   edited: boolean;
   expires_at?: Timestamp;
-  read_by: ID[];
   reactions: MessageReactions | null;
   attachments: MessageAttachment[];
   created_at: Timestamp;
   edited_at: Timestamp;
 
   // Populated from joins
+  read_by: ID[];
   sender_username?: string;
   sender_display_name?: string;
   sender_avatar?: string;

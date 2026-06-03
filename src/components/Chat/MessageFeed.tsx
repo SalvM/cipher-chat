@@ -1,20 +1,25 @@
 import MessageBubble from "@/components/Chat/MessageBubble"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { Emoji, Message } from "@/types/messageTypes"
+import type { Emoji } from "@/types/messageTypes"
 import type { AnyMessage, ID } from "@/types/utilityTypes"
 import { useEffect, useRef } from "react"
 
 interface MessageFeedProps {
     userId: ID;
-    messages: Message[];
+    messages: AnyMessage[];
     isLoading: boolean;
     onEdit: (messageId: ID, content: string) => void;
     onDelete: (messageId: ID) => void;
     addReaction: (messageId: ID, emoji: Emoji) => void;
     removeReaction: (messageId: ID, emoji: Emoji) => void;
+    onMessageExpired: (messageId: ID) => void;
     onReply?: (message: AnyMessage) => void;
 }
-export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, removeReaction, onReply }: MessageFeedProps) => {
+export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, removeReaction, onReply, onMessageExpired }: MessageFeedProps) => {
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleReact = (messageId: ID, emoji: Emoji, action: 'add' | 'remove') => {
         if (action === 'add') {
@@ -23,12 +28,6 @@ export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, r
             removeReaction(messageId, emoji);
         }
     };
-
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
     const shouldShowAvatar = (index: number) => {
         return index === 0 || messages[index - 1].sender_id !== messages[index].sender_id;
     };
@@ -48,6 +47,7 @@ export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, r
                             onReply={onReply}
                             onReact={handleReact}
                             currentUserId={userId}
+                            onExpire={onMessageExpired}
                         />
                     ))}
                     <div ref={messagesEndRef} />

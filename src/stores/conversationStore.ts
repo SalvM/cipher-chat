@@ -160,34 +160,22 @@ export const useConversationStore = create<
   },
 
   setChatSettings: async (chatId: ID, disappearingMinutes: number) => {
-    console.log('setChatSettings', { chatId, disappearingMinutes });
+    if (
+      isNaN(disappearingMinutes) ||
+      ![0, 1, 5, 30, 60, 1440, 10080].includes(disappearingMinutes)
+    )
+      return;
     const chat = get().chats[chatId];
     if (!chat) return;
-
-    set({ isLoading: true });
-    try {
-      const responseData = await api.put<{ disappearing_timer: number }>(
-        `/chats/${chatId}/settings`,
-        {
-          body: { disappearing_timer: disappearingMinutes },
-        }
-      );
-      if (!responseData) throw responseData;
-      const { disappearing_timer } = responseData;
-      set({
-        chats: {
-          ...get().chats,
-          [chatId]: {
-            ...chat,
-            disappearing_timer,
-          },
+    set({
+      chats: {
+        ...get().chats,
+        [chatId]: {
+          ...chat,
+          disappearing_minutes: disappearingMinutes,
         },
-      });
-    } catch (e) {
-      console.error('[setChatSettings]', e);
-    } finally {
-      set({ isLoading: false });
-    }
+      },
+    });
   },
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),

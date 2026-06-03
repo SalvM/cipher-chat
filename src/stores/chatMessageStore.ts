@@ -23,18 +23,20 @@ interface ChatMessageStore {
 
   fetchMessages: (chatId: ID) => Promise<void>;
 
-  sendMessage: (
-    chatId: ID,
-    content: string,
-    replyToId?: ID
-  ) => GenericApiResponse; // Send a new message from form submit
+  sendMessage: (data: {
+    chatId: ID;
+    content: string;
+    disappearingMinutes: number;
+    replyToId?: ID;
+  }) => GenericApiResponse; // Send a new message from form submit
 
-  sendMessageWithAttachment: (
-    chatId: ID,
-    content: string,
-    file: Blob,
-    replyToId?: ID
-  ) => GenericApiResponse; // ... with attachment
+  sendMessageWithAttachment: (data: {
+    chatId: ID;
+    content: string;
+    file: Blob;
+    disappearingMinutes: number;
+    replyToId?: ID;
+  }) => GenericApiResponse; // ... with attachment
 
   editMessage: (
     chatId: ID,
@@ -105,12 +107,14 @@ export const useChatMessageStore = create<
     }
   },
 
-  sendMessage: async (chatId, content, replyToId?) => {
+  sendMessage: async (data) => {
+    const { chatId, content, disappearingMinutes, replyToId } = data;
     try {
       await api.post<Message>('/messages', {
         body: {
           content,
           chat_id: chatId,
+          disappearing_minutes: disappearingMinutes,
           reply_to: replyToId ?? null,
         },
       });
@@ -124,11 +128,13 @@ export const useChatMessageStore = create<
     }
   },
 
-  sendMessageWithAttachment: async (chatId, content, file, replyToId?) => {
+  sendMessageWithAttachment: async (data) => {
+    const { chatId, content, file, disappearingMinutes, replyToId } = data;
     try {
       const formData = new FormData();
       formData.append('content', content);
       formData.append('chat_id', chatId);
+      formData.append('disappearing_minutes', disappearingMinutes?.toString());
       formData.append('file', file);
       if (replyToId) {
         formData.append('reply_to', replyToId);

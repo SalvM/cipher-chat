@@ -25,7 +25,7 @@ interface ChatHeaderProps {
   chatAvatar: string;
   chatDisplayName?: string;
   chatStatus: 'online' | 'offline' | 'away' | 'dnd' | 'invisible';
-  disappearing_timer?: number;
+  disappearing_minutes?: number;
   updateChatSettings: (
     chatId: ID,
     settings: ChatSettings
@@ -36,7 +36,7 @@ export const ChatHeader = ({
   chatAvatar,
   chatDisplayName,
   chatStatus,
-  disappearing_timer,
+  disappearing_minutes,
   updateChatSettings,
 }: ChatHeaderProps) => {
   return (
@@ -59,10 +59,10 @@ export const ChatHeader = ({
           </p>
         </div>
 
-        {disappearing_timer ? (
+        {disappearing_minutes ? (
           <div className="flex items-center gap-1 text-xs text-warning bg-elevated px-2 py-1 rounded-full">
             <Timer className="w-3 h-3" />
-            {formatTimerLabel(disappearing_timer)}
+            {formatTimerLabel(disappearing_minutes)}
           </div>
         ) : null}
       </div>
@@ -83,11 +83,11 @@ export const ChatHeader = ({
                     key={option.value}
                     onClick={() =>
                       updateChatSettings(chatId, {
-                        disappearing_timer: option.value,
+                        disappearing_minutes: option.value,
                       })
                     }
                     className={
-                      disappearing_timer === option.value ? 'bg-secondary' : ''
+                      disappearing_minutes === option.value ? 'bg-secondary' : ''
                     }
                   >
                     {option.label}

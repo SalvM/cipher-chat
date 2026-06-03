@@ -12,6 +12,7 @@ export function useChatMessages(chatId: ID) {
     sendMessageWithAttachment,
     addReaction,
     removeReaction,
+    removeMessageFromWs,
   } = useChatMessageStore();
 
   const messages = useChatMessageStore((s) => s.getChatMessages(chatId));
@@ -34,5 +35,6 @@ export function useChatMessages(chatId: ID) {
     sendMessageWithAttachment,
     addReaction,
     removeReaction,
+    removeMessageFromWs,
   };
 }

@@ -9,9 +9,9 @@ export interface ChatInputField {
 
 export interface Chat {
   _id: ID;
-  partecipants: ID[];
+  participants: ID[];
   otherUser: User;
-  disappearing_timer: number | null; // minutes, 0 = off
+  disappearing_minutes: number | null; // minutes, 0 = off
   created_at: Timestamp;
   last_message?: Message;
 
@@ -20,5 +20,5 @@ export interface Chat {
 }
 
 export interface ChatSettings {
-  disappearing_timer?: number;
+  disappearing_minutes?: number;
 }

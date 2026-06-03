@@ -24,6 +24,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
     deleteMessage,
     addReaction,
     removeReaction,
+    removeMessageFromWs
   } = useChatMessages(chatId);
   const { typingInCurrentChat, setChatInputField, setChatSettings } =
     useConversationStore();
@@ -54,15 +55,17 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
   const handleSendMessage = async (message: string, file: Blob | null) => {
     setInputDisabled(true);
     try {
+      const messageData: any = {
+        chatId,
+        content: message,
+        disappearingMinutes: currentChat?.disappearing_minutes,
+        replyToId: chatInputField?.replyToMessage?._id
+      };
       if (file) {
-        await sendMessageWithAttachment(
-          chatId,
-          message,
-          file,
-          chatInputField?.replyToMessage?._id
-        );
+        messageData.file = file;
+        await sendMessageWithAttachment(messageData);
       } else {
-        await sendMessage(chatId, message, chatInputField?.replyToMessage?._id);
+        await sendMessage(messageData);
       }
     } catch (e) {
       console.error(e);
@@ -71,6 +74,8 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
     }
     resetChatInputField();
   };
+
+  const handleExpiredMessage = (messageId: ID) => removeMessageFromWs(chatId, messageId)
 
   useEffect(() => {
     fetchMessages(chatId);
@@ -89,6 +94,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
         addReaction={addReaction}
         removeReaction={removeReaction}
         onReply={handleMessageReply}
+        onMessageExpired={handleExpiredMessage}
       />
       <TypingIndicator users={typings} />
       {chatInputField?.replyToMessage && (
@@ -102,7 +108,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
       <ChatInput
         key={chatId}
         initialValue={currentChat?.chatInputField?.inputMessage ?? ''}
-        chatDisappearingMinutes={currentChat?.disappearing_timer}
+        chatDisappearingMinutes={currentChat?.disappearing_minutes}
         onBlur={handleBlur}
         onSendMessage={handleSendMessage}
         disabled={inputDisabled}

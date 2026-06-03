@@ -112,12 +112,10 @@ const jojoMessages: Message[] = [
 const mockChats: Chat[] = [
   {
     _id: 'chat_1',
-    type: 'private',
-    partecipants: ['1', '3'], // DIO e Joseph
-    disappearing_timer: null,
     created_at: '2024-03-15T11:20:00Z',
-    avatar: DIO_SRC,
-    participant_details: [mockUsers[0], mockUsers[2]],
+    participants: [mockUsers[1]._id, mockUsers[2]._id],
+    disappearing_minutes: 5,
+    otherUser: mockUsers[2],
     last_message: {
       _id: 'msg_1',
       chat_id: 'chat_1',
@@ -133,12 +131,10 @@ const mockChats: Chat[] = [
   },
   {
     _id: 'chat_2',
-    type: 'group',
-    partecipants: ['1', '2', '3'],
-    disappearing_timer: 5, // 5 minuti
     created_at: '2024-03-10T08:00:00Z',
-    avatar: 'https://via.placeholder.com/150?text=JoJo+Squad',
-    participant_details: mockUsers,
+    participants: [mockUsers[0]._id, mockUsers[2]._id],
+    otherUser: mockUsers[0],
+    disappearing_minutes: 5,
     last_message: {
       _id: 'msg_2',
       chat_id: 'chat_2',

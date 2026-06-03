@@ -1,5 +1,4 @@
-// src/components/chat/MessageBubble.tsx
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Edit2,
@@ -7,7 +6,6 @@ import {
   Reply,
   Smile,
   CheckCheck,
-  Timer,
   Check,
   X,
 } from 'lucide-react';
@@ -17,12 +15,12 @@ import ReactionPicker from './ReactionPicker';
 import type { Emoji, Message as GlobalMessage } from '@/types/messageTypes';
 import type { AnyMessage, ID, ReactionAction } from '@/types/utilityTypes';
 import { Avatar } from '@/components/ui/avatar';
-import { Tooltip } from '../ui/tooltip';
-import ChatAttachment from './ChatAttachment';
+import ChatAttachment from '@/components/Chat/ChatAttachment';
+import MessageExpireTimer from '@/components/Chat/MessageExpireTimer';
 
 // Type guard
 const isGlobalMessage = (message: AnyMessage): message is GlobalMessage => {
-  return 'chat_id' in message && 'read_by' in message;
+  return 'chat_id' in message;
 };
 
 interface MessageBubbleProps {
@@ -33,11 +31,12 @@ interface MessageBubbleProps {
   onDelete?: (messageId: ID) => void;
   onReply?: (message: AnyMessage) => void;
   onReact: (messageId: ID, emoji: Emoji, action: ReactionAction) => void;
+  onExpire: (messageId: ID) => void;
   currentUserId: ID;
   isCluster?: boolean;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({
+const MessageBubble = ({
   message,
   isOwn,
   showAvatar,
@@ -45,22 +44,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onDelete,
   onReply,
   onReact,
+  onExpire,
   currentUserId,
   isCluster = false,
-}) => {
-  const time = new Date(message.created_at).toLocaleTimeString([], {
+}: MessageBubbleProps) => {
+  const time = useMemo(() => new Date(message.created_at).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }), [message])
 
+  const [isExpiring, setIsExpiring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
 
-  const isRead =
-    !isCluster && isGlobalMessage(message)
-      ? message.read_by?.length > 1
-      : false;
+  const isRead = useMemo(
+    () =>
+      !isCluster && isGlobalMessage(message) ? message?.read_by?.length > 1 : false,
+    [isCluster, message]
+  );
 
   const handleEdit = () => {
     if (onEdit) {
@@ -73,18 +75,32 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     onReact(message._id, emoji, 'add');
   };
 
-  const reactionsArray = Object.entries(message.reactions || {}).map(
-    ([emoji, users]) => ({
-      emoji,
-      count: users.length,
-      reacted: users.includes(currentUserId),
-    })
-  );
+  const handleMessageExpire = () => {
+    setIsExpiring(true);
 
+    setTimeout(() => {
+      if (onExpire) {
+        onExpire(message._id);
+      }
+    }, 600);
+  };
+
+
+
+  const reactionsArray = useMemo(
+    () =>
+      Object.entries(message.reactions || {}).map(([emoji, users]) => ({
+        emoji,
+        count: users.length,
+        reacted: users.includes(currentUserId),
+      })),
+    [message.reactions, currentUserId]
+  );
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={isExpiring ? { opacity: 0, y: -50, scale: 0.9 } : { opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6 }}
       className={`flex gap-3 ${isOwn && !isCluster ? 'flex-row-reverse' : ''} mb-4 group`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
@@ -99,25 +115,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           size="md"
         />
       ) : (
-        <div className="w-9" />
+        <div className="w-9 shrink-0" />
       )}
 
       <div
         className={`max-w-[70%] ${isOwn && !isCluster ? 'items-end' : 'items-start'} flex flex-col relative`}
       >
-        {/* Header with name and time */}
-        {showAvatar && (
-          <div
-            className={`flex items-center gap-2 mb-1 ${isOwn && !isCluster ? 'flex-row-reverse' : ''}`}
-          >
-            <span className="text-sm font-medium text-text-primary">
-              {message.sender_display_name}
-            </span>
-            <span className="text-xs text-text-muted">{time}</span>
+        {/* Header with name, time, and expire timer */}
+        {(showAvatar || message.expires_at) && (
+          <div className={`flex items-center gap-2 mb-1 ${isOwn && !isCluster ? 'flex-row-reverse' : ''}`}>
+            {showAvatar && (
+              <>
+                <span className="text-sm font-medium text-text-primary">
+                  {message.sender_display_name}
+                </span>
+                <span className="text-xs text-text-muted">{time}</span>
+              </>
+            )}
             {message.expires_at && (
-              <Tooltip content={'Disappearing message'}>
-                <Timer className="w-3 h-3 text-warning" />
-              </Tooltip>
+              <MessageExpireTimer expires_at={message.expires_at} onExpire={handleMessageExpire} />
             )}
           </div>
         )}
