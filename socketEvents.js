@@ -16,8 +16,10 @@ export const CLUSTER_MESSAGE = "cluster_message";
 export const CLUSTER_MESSAGE_EDITED = "cluster_message_edited";
 export const CLUSTER_MESSAGE_DELETED = "cluster_message_deleted";
 export const CLUSTER_MESSAGE_REACTION = "cluster_message_reaction";
-export const CLUSTER_TYPING = "cluster_typing";
+export const NEW_TOPIC = "new_topic";
+export const TOPIC_TYPING = "topic_typing";
 export const CLUSTER_SETTINGS_UPDATED = "cluster_settings_updated";
+export const TOPIC_SETTINGS_UPDATED = "topic_settings_updated";
 export const USER_JOINED_CLUSTER = "user_joined_cluster";
 export const USER_LEFT_CLUSTER = "user_left_cluster";
 
@@ -40,8 +42,10 @@ export default {
   CLUSTER_MESSAGE_EDITED,
   CLUSTER_MESSAGE_DELETED,
   CLUSTER_MESSAGE_REACTION,
-  CLUSTER_TYPING,
+  NEW_TOPIC,
+  TOPIC_TYPING,
   CLUSTER_SETTINGS_UPDATED,
+  TOPIC_SETTINGS_UPDATED,
   USER_JOINED_CLUSTER,
   USER_LEFT_CLUSTER,
 };

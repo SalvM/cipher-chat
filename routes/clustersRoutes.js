@@ -3,6 +3,7 @@ import { isValidObjectId, Types } from "mongoose";
 import { Cluster, ClusterMessage, User } from "../utils/db.js";
 import websocketManager from "../websocket.js";
 import { authenticate } from "../utils/auth.js";
+import SocketEvents from "../socketEvents.js";
 
 const router = express.Router();
 
@@ -36,7 +37,9 @@ router.post("/", authenticate, async (req, res) => {
         {
           _id: new Types.ObjectId(),
           name: "general",
+          description: "",
           cluster_id: clusterId,
+          disappearing_minutes: 0,
         },
       ],
     });
@@ -53,9 +56,27 @@ router.post("/", authenticate, async (req, res) => {
 /* ------------------------------------------------------------------ */
 router.get("/", authenticate, async (req, res) => {
   try {
-    const clusters = await Cluster.find({ members: req.user._id }).lean();
+    const clusters = await Cluster.find({
+      members: req.user._id,
+    })
+      .select("_id name description owner_id members topics created_at")
+      .lean();
 
-    res.json({ clusters });
+    const allMemberIds = [...new Set(clusters.flatMap((c) => c.members))];
+    const users = await User.find(
+      { _id: { $in: allMemberIds } },
+      "_id username display_name avatar",
+    ).lean();
+
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+    const enrichedClusters = clusters.map((cluster) => ({
+      ...cluster,
+      member_details: cluster.members.map((memberId) =>
+        userMap.get(memberId.toString()),
+      ),
+    }));
+
+    res.json({ clusters: enrichedClusters });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -109,14 +130,22 @@ router.post("/:cluster_id/topics", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid cluster ID" });
     }
 
-    const { name } = req.body;
+    const { name, description, disappearing_minutes } = req.body;
     if (!name?.trim() || typeof name !== "string") {
       return res.status(400).json({ error: "Invalid topic name" });
+    }
+    if (
+      description !== undefined &&
+      (!description?.trim() || typeof descriptionname !== "string")
+    ) {
+      return res.status(400).json({ error: "Invalid topic description" });
     }
 
     const newTopic = {
       _id: new Types.ObjectId(),
       name: name.trim(),
+      description: description ?? "",
+      disappearing_minutes: disappearing_minutes ?? 0,
       cluster_id: req.params.cluster_id,
       created_at: new Date(),
     };
@@ -131,6 +160,15 @@ router.post("/:cluster_id/topics", authenticate, async (req, res) => {
     if (!cluster) {
       return res.status(404).json({ error: "Cluster not found" });
     }
+
+    websocketManager.broadcastToChat(
+      SocketEvents.NEW_TOPIC,
+      {
+        cluster_id: req.params.cluster_id,
+        topic: newTopic,
+      },
+      cluster.members,
+    );
 
     res.status(201).json(newTopic);
   } catch (err) {
@@ -181,5 +219,106 @@ router.get(
     }
   },
 );
+
+/* ------------------------------------------------------------------ */
+/*  PUT /:cluster_id/topic/:topic_id  –  Update a topic's properties  */
+/* ------------------------------------------------------------------ */
+router.put("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.cluster_id)) {
+      return res.status(400).json({ error: "Invalid cluster ID" });
+    }
+    if (!isValidObjectId(req.params.topic_id)) {
+      return res.status(400).json({ error: "Invalid topic ID" });
+    }
+
+    const { disappearing_minutes, name, description } = req.body;
+
+    // Validation...
+    if (
+      disappearing_minutes === undefined &&
+      name === undefined &&
+      description === undefined
+    ) {
+      return res
+        .status(400)
+        .json({ error: "At least one field must be provided for update" });
+    }
+    if (disappearing_minutes !== undefined) {
+      if (
+        typeof disappearing_minutes !== "number" ||
+        disappearing_minutes < 0 ||
+        !Number.isInteger(disappearing_minutes)
+      ) {
+        return res.status(400).json({
+          error: "disappearing_minutes must be a non-negative integer",
+        });
+      }
+    }
+    if (name !== undefined) {
+      if (!name?.trim() || typeof name !== "string") {
+        return res.status(400).json({ error: "Invalid topic name" });
+      }
+    }
+    if (description !== undefined) {
+      if (!description?.trim() || typeof description !== "string") {
+        return res.status(400).json({ error: "Invalid topic description" });
+      }
+    }
+
+    // BUILD $set with dot notation instead of replacing subdocument
+    const updateFields = {};
+    if (disappearing_minutes !== undefined)
+      updateFields["topics.$[topic].disappearing_minutes"] =
+        disappearing_minutes;
+    if (name !== undefined) updateFields["topics.$[topic].name"] = name.trim();
+    if (description !== undefined)
+      updateFields["topics.$[topic].description"] = description.trim();
+
+    const cluster = await Cluster.findOneAndUpdate(
+      {
+        _id: req.params.cluster_id,
+        members: req.user._id,
+        owner_id: req.user._id,
+        "topics._id": req.params.topic_id,
+      },
+      {
+        $set: updateFields,
+      },
+      {
+        arrayFilters: [{ "topic._id": req.params.topic_id }],
+        new: true, // Return updated document
+        runValidators: true,
+      },
+    ).lean();
+
+    if (!cluster) {
+      return res.status(404).json({
+        error: "Cluster not found, topic not found, or user is not the owner",
+      });
+    }
+
+    const updatedTopic = cluster.topics.find(
+      (topic) => topic._id.toString() === req.params.topic_id,
+    );
+    if (!updatedTopic) {
+      return res.status(404).json({ error: "Topic not found" });
+    }
+
+    websocketManager.broadcastToChat(
+      SocketEvents.TOPIC_SETTINGS_UPDATED,
+      {
+        cluster_id: req.params.cluster_id,
+        topic: updatedTopic,
+      },
+      cluster.members,
+    );
+
+    res.json(updatedTopic); // Return the updated topic
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 export default router;

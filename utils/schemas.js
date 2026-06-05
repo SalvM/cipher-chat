@@ -57,6 +57,7 @@ const clusterSchema = new mongoose.Schema({
       name: String,
       cluster_id: String,
       created_at: { type: Date, default: Date.now },
+      disappearing_minutes: Number,
     },
   ],
   created_at: { type: Date, default: Date.now },
