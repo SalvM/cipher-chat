@@ -30,7 +30,7 @@ class ConnectionManager {
   }
 
   async broadcastToChat(eventType, eventContent, participants) {
-    //console.log("broadcastToChat", { eventType, eventContent, participants });
+    // console.log("broadcastToChat", { eventType, eventContent, participants });
     for (const userId of participants) {
       this.sendPersonalMessage(userId.toString(), eventType, eventContent);
     }
