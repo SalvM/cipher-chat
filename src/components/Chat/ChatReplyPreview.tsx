@@ -1,9 +1,9 @@
 import { Reply, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { type Message } from '@/types/messageTypes';
+import type { AnyMessage } from '@/types/utilityTypes';
 
 interface ChatReplyPreviewProps {
-  replyingTo: Message;
+  replyingTo: AnyMessage;
   clearReplyingTo: () => void;
 }
 export const ChatReplyPreview = ({

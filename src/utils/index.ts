@@ -7,3 +7,4 @@ export function cn(...inputs: ClassValue[]) {
 
 export const WS_URL = `${import.meta.env.VITE_BACKEND_URL}`;
 export const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api`;
+export const EMPTY_MESSAGES = {};

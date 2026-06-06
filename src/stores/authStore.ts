@@ -70,10 +70,10 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         if (!responseData) throw responseData;
         const { token, user } = responseData;
         localStorage.setItem('token', token);
-        set({ token, user, isLoading: false });
+        set({ token, user, isAuthenticated: true, isLoading: false });
         return { success: true };
       } catch (error: any) {
-        const message = error.response?.data?.detail || 'Registration failed';
+        const message = error.data?.detail ?? 'Registration failed';
         return { success: false, error: message };
       }
     },
@@ -101,7 +101,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         }
         return { success: true };
       } catch (error: any) {
-        const message = error.response?.data?.detail ?? 'Login failed';
+        const message = error.data?.detail ?? 'Login failed';
         return { success: false, error: message };
       }
     },
@@ -130,7 +130,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
       } catch (error: any) {
         return {
           success: false,
-          error: error.response?.data?.detail || 'Failed to update profile',
+          error: error.data?.detail ?? 'Failed to update profile',
         };
       }
     },
@@ -148,6 +148,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
 
     logout: () => {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       set({ token: null, isAuthenticated: false, user: null });
     },
   })

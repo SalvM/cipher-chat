@@ -1,5 +1,6 @@
 import { ChatMessageFeed } from '@/components/Chat/ChatMessageFeed';
 import { ChatSidebar } from '@/components/Chat/ChatSidebar';
+import ClusterView from '@/components/Chat/ClusterView';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
@@ -50,7 +51,7 @@ export default function ChatPage() {
   }, [user?._id]);
 
   return (
-    <div className="flex min-h-screen flex-row items-center justify-center bg-base">
+    <div className="flex min-h-screen max-h-screen flex-row items-center justify-center bg-base">
       <ChatSidebar
         chats={Object.values(chats)}
         clusters={Object.values(clusters)}
@@ -69,16 +70,9 @@ export default function ChatPage() {
         )}
 
         {/* Cluster chat feed */}
-        {/*
-        {
-          selectedTab === 'cluster' && selectedClusterId && selectedTopicId && user?._id &&
-          (
-            <>
-              <ClusterMessageFeed clusterId={selectedClusterId} topicId={selectedTopicId} userId={user._id} onReact={() => null} />
-            </>
-          )
-        }
-        */}
+        {selectedTab === 'cluster' && selectedClusterId && user?._id && (
+          <ClusterView clusterId={selectedClusterId} userId={user._id} />
+        )}
       </div>
     </div>
   );

@@ -14,7 +14,6 @@ export interface Cluster {
   // Populated fields
   avatar?: string;
   member_details?: User[];
-  member_count?: number;
 }
 
 export interface ClusterMessage extends Omit<Message, 'chat_id' | 'read_by'> {
@@ -28,9 +27,18 @@ export interface SendClusterMessageResponse {
   error?: string;
 }
 
+export interface ClusterInputField {
+  inputMessage?: string | null;
+  replyToMessage?: ClusterMessage | null;
+}
+
 export interface Topic {
   _id: ID;
   name: string;
   description?: string;
   created_at: Timestamp;
+  disappearing_minutes: number;
+
+  // Populated fields
+  clusterInputField?: ClusterInputField;
 }

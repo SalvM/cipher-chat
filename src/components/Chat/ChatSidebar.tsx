@@ -7,6 +7,7 @@ import type { ChatType } from '@/types/utilityTypes';
 import { Button } from '../ui/button';
 import { NewChatDialog } from './NewChatDialog';
 import { useState } from 'react';
+import { NewClusterDialog } from './NewClusterDialog';
 
 interface ChatSidebarProps {
     chats: Chat[];
@@ -21,6 +22,7 @@ interface ChatSidebarProps {
 }
 export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, selectedClusterId, onCreateChat, onSelectChat, onTabChange, onLogout }: ChatSidebarProps) => {
     const [newChatDialogOpen, setNewChatDialogOpen] = useState(false);
+    const [newClusterDialogOpen, setNewClusterDialogOpen] = useState(false);
 
     return (
         <div className="w-72 h-screen bg-overlay backdrop-blur-xl border-r border-border-strong flex flex-col">
@@ -73,11 +75,17 @@ export const ChatSidebar = ({ chats, clusters, selectedTab, selectedChatId, sele
 
                 {selectedTab === 'cluster' && (
                     <div className="flex flex-col gap-2 p-3">
+                        <Button onClick={() => setNewClusterDialogOpen(true)}>New cluster</Button>
+                        <NewClusterDialog
+                            dialogOpen={newClusterDialogOpen}
+                            closeDialog={() => setNewClusterDialogOpen(false)}
+                            onCreated={() => null}
+                        />
                         {clusters.map((cluster) => (
                             <ClusterItem
                                 key={cluster._id}
                                 name={cluster.name}
-                                memberCount={cluster.member_count ?? 0}
+                                memberCount={cluster?.members?.length ?? 0}
                                 isSelected={selectedClusterId === cluster._id}
                                 onClick={() => onSelectChat(cluster._id, true)}
                             />

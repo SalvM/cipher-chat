@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import api from '@/services/Api';
+import { useSearchUsers } from '@/hooks/useApiQueries';
 import type { User } from '@/types/userTypes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from '../ui/avatar';
@@ -18,38 +18,14 @@ export const NewChatDialog = ({
   onCreated,
 }: NewChatDialogProps) => {
   const [query, setQuery] = useState('');
-  const [isLoading, setLoading] = useState(false);
-  const [searchResults, setSearchResult] = useState<User[] | null>();
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: searchResults = [], isLoading } = useSearchUsers(query);
 
   const suggestion: User | null = useMemo(
     () => searchResults?.[0] ?? null,
     [searchResults]
   );
-
-  const searchUsers = async (query: string) => {
-    if (isLoading) return;
-    if (!query) {
-      setSearchResult([]);
-    }
-    query = query.trim();
-    if (!query || query.length < 2) {
-      setSearchResult([]);
-    }
-
-    try {
-      setLoading(true);
-      const responseData = await api.get<{ users: User[] }>(
-        `/users/search?q=${encodeURIComponent(query)}`
-      );
-      setSearchResult(responseData?.users ?? []);
-    } catch (error) {
-      setSearchResult([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleStart = async () => {
     if (!suggestion) return;
@@ -58,21 +34,20 @@ export const NewChatDialog = ({
   };
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (query.trim().length < 2) return;
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      searchUsers(query);
-    }, 400);
-  }, [query]);
+    if (!dialogOpen) {
+      setQuery('');
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [dialogOpen]);
 
   return (
     <Dialog
       open={dialogOpen}
+      onOpenChange={closeDialog}
       title="New Chat"
       description="Search for a user to start a conversation."
     >
@@ -86,6 +61,7 @@ export const NewChatDialog = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && closeDialog()}
+            ref={inputRef}
           />
         </div>
         {isLoading && (

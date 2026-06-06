@@ -123,7 +123,7 @@ export const useChatMessageStore = create<
       console.error(error);
       return {
         success: false,
-        error: error.response?.detail ?? 'Failed to send message',
+        error: error.data?.detail ?? 'Failed to send message',
       };
     }
   },
@@ -148,7 +148,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.detail ?? 'Upload failed',
+        error: error.data?.detail ?? 'Upload failed',
       };
     }
   },
@@ -171,7 +171,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.detail ?? 'Failed to send message',
+        error: error.data?.detail ?? 'Failed to send message',
       };
     }
   },
@@ -188,7 +188,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.detail ?? 'Failed to send message',
+        error: error.data?.detail ?? 'Failed to send message',
       };
     }
   },
@@ -201,7 +201,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.detail ?? 'Failed to add reaction',
+        error: error.data?.detail ?? 'Failed to add reaction',
       };
     }
   },
@@ -215,7 +215,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.response?.detail ?? 'Failed to remove reaction',
+        error: error.data?.detail ?? 'Failed to remove reaction',
       };
     }
   },

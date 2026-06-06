@@ -36,15 +36,17 @@ npm run dev                # http://localhost:5173
 app/
   assets/        # all medias (icons, images, …)
   components/
+    Auth/        # auth components
     Chat/        # domain components (MessageList, ChannelSidebar, …)
     Common/      # Common components used by other components
     ui/          # primitive components (Button, Input, …)
-  hooks/         # useSocket, useMessages, …
+  hooks/         # useSocket, useChatMessages, …
   Pages/         # Main route pages
   services/      # Third part APIs, our BE APIs
-  hooks/          # Custom hooks
-  stores/         # zustand stores
+  stores/        # zustand stores
+  styles/        # theme and styles
   types/         # typescript types declarations
+  utils/         # utility functions
 ```
 
 ## Privacy model

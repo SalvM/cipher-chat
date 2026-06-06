@@ -33,8 +33,8 @@ class SocketService {
     this.emit('user_typing', { chatId, isTyping });
   };
 
-  clusterTyping = (topicId: string, isTyping: boolean) => {
-    this.emit('cluster_typing', { topicId, isTyping });
+  clusterTyping = (clusterId: string, topicId: string, isTyping: boolean) => {
+    this.emit('topic_typing', { clusterId, topicId, isTyping });
   };
 }
 

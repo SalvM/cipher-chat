@@ -1,6 +1,6 @@
 import { Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useRef, useState, type SubmitEventHandler } from 'react';
+import { useEffect, useRef, useState, type SubmitEventHandler } from 'react';
 import FileInput from '@/components/Common/FileInput';
 import { ChatFilePreview } from './ChatFilePreview';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,12 @@ export const ChatInput = ({
     setSelectedFile(null);
     handleTyping(false);
   };
+
+  useEffect(() => {
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  }, [disabled]);
 
   return (
     <>
