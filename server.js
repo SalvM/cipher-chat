@@ -159,6 +159,16 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on(SocketEvents.TOPIC_TYPING, async (data) => {
+    // console.log("[ws] TOPIC_TYPING", { ...data, userId });
+    await websocketManager.broadcastTopicTyping({
+      userId,
+      clusterId: data.clusterId,
+      topicId: data.topicId,
+      isTyping: data.isTyping,
+    });
+  });
+
   socket.on("disconnect", () => {
     websocketManager.disconnect(userId);
     User.updateOne({ _id: userId }, { $set: { status: "offline" } }).catch(
