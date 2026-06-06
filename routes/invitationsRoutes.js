@@ -67,10 +67,13 @@ router.get("/:invitation_id", authenticate, async (req, res) => {
       return res.json({ message: "Already a member" });
     }
 
-    await Cluster.updateOne(
-      { _id: cluster._id },
-      { $addToSet: { members: req.user._id } },
-    );
+    await Promise.all([
+      Cluster.updateOne(
+        { _id: cluster._id },
+        { $addToSet: { members: req.user._id } },
+      ),
+      Invitation.deleteOne({ _id: req.params.invitation_id }),
+    ]);
 
     setImmediate(() => {
       User.findOne(

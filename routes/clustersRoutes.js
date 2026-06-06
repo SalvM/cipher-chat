@@ -251,7 +251,8 @@ router.put("/:cluster_id", authenticate, async (req, res) => {
 
     const updateFields = {};
     if (name !== undefined) updateFields.name = name.trim();
-    if (description !== undefined) updateFields.description = description.trim();
+    if (description !== undefined)
+      updateFields.description = description.trim();
 
     const cluster = await Cluster.findOneAndUpdate(
       {
@@ -423,94 +424,102 @@ router.put("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
 /* ------------------------------------------------------------------ */
 /*  DELETE /:cluster_id/topics/:topic_id  –  Delete topic (owner only)*/
 /* ------------------------------------------------------------------ */
-router.delete("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
-  try {
-    if (!isValidObjectId(req.params.cluster_id)) {
-      return res.status(400).json({ error: "Invalid cluster ID" });
-    }
-    if (!isValidObjectId(req.params.topic_id)) {
-      return res.status(400).json({ error: "Invalid topic ID" });
-    }
+router.delete(
+  "/:cluster_id/topics/:topic_id",
+  authenticate,
+  async (req, res) => {
+    try {
+      if (!isValidObjectId(req.params.cluster_id)) {
+        return res.status(400).json({ error: "Invalid cluster ID" });
+      }
+      if (!isValidObjectId(req.params.topic_id)) {
+        return res.status(400).json({ error: "Invalid topic ID" });
+      }
 
-    const cluster = await Cluster.findOne({
-      _id: req.params.cluster_id,
-      owner_id: req.user._id,
-      "topics._id": req.params.topic_id,
-    });
-
-    if (!cluster) {
-      return res.status(403).json({
-        error: "Cluster not found, topic not found, or user is not the owner",
+      const cluster = await Cluster.findOne({
+        _id: req.params.cluster_id,
+        owner_id: req.user._id,
+        "topics._id": req.params.topic_id,
       });
+
+      if (!cluster) {
+        return res.status(403).json({
+          error: "Cluster not found, topic not found, or user is not the owner",
+        });
+      }
+
+      await Promise.all([
+        Cluster.findByIdAndUpdate(req.params.cluster_id, {
+          $pull: { topics: { _id: req.params.topic_id } },
+        }),
+        ClusterMessage.deleteMany({
+          cluster_id: req.params.cluster_id,
+          topic_id: req.params.topic_id,
+        }),
+      ]);
+
+      websocketManager.broadcastToChat(
+        SocketEvents.TOPIC_DELETED,
+        {
+          cluster_id: req.params.cluster_id,
+          topic_id: req.params.topic_id,
+        },
+        cluster.members,
+      );
+
+      res.json({ message: "Topic deleted" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
     }
-
-    await Promise.all([
-      Cluster.findByIdAndUpdate(req.params.cluster_id, {
-        $pull: { topics: { _id: req.params.topic_id } },
-      }),
-      ClusterMessage.deleteMany({
-        cluster_id: req.params.cluster_id,
-        topic_id: req.params.topic_id,
-      }),
-    ]);
-
-    websocketManager.broadcastToChat(
-      SocketEvents.TOPIC_DELETED,
-      {
-        cluster_id: req.params.cluster_id,
-        topic_id: req.params.topic_id,
-      },
-      cluster.members,
-    );
-
-    res.json({ message: "Topic deleted" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+  },
+);
 
 /* ------------------------------------------------------------------ */
 /*  DELETE /:cluster_id/members/:member_id  –  Remove member (owner)  */
 /* ------------------------------------------------------------------ */
-router.delete("/:cluster_id/members/:member_id", authenticate, async (req, res) => {
-  try {
-    if (!isValidObjectId(req.params.cluster_id)) {
-      return res.status(400).json({ error: "Invalid cluster ID" });
+router.delete(
+  "/:cluster_id/members/:member_id",
+  authenticate,
+  async (req, res) => {
+    try {
+      if (!isValidObjectId(req.params.cluster_id)) {
+        return res.status(400).json({ error: "Invalid cluster ID" });
+      }
+      if (!isValidObjectId(req.params.member_id)) {
+        return res.status(400).json({ error: "Invalid member ID" });
+      }
+
+      const cluster = await Cluster.findOneAndUpdate(
+        {
+          _id: req.params.cluster_id,
+          owner_id: req.user._id,
+        },
+        { $pull: { members: req.params.member_id } },
+        { new: true },
+      ).lean();
+
+      if (!cluster) {
+        return res.status(403).json({
+          error: "Cluster not found or user is not the owner",
+        });
+      }
+
+      websocketManager.broadcastToChat(
+        SocketEvents.MEMBER_REMOVED,
+        {
+          cluster_id: req.params.cluster_id,
+          user_id: req.params.member_id,
+        },
+        [...cluster.members, req.params.member_id],
+      );
+
+      res.json({ message: "Member removed" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Server error" });
     }
-    if (!isValidObjectId(req.params.member_id)) {
-      return res.status(400).json({ error: "Invalid member ID" });
-    }
-
-    const cluster = await Cluster.findOneAndUpdate(
-      {
-        _id: req.params.cluster_id,
-        owner_id: req.user._id,
-      },
-      { $pull: { members: req.params.member_id } },
-      { new: true },
-    ).lean();
-
-    if (!cluster) {
-      return res.status(403).json({
-        error: "Cluster not found or user is not the owner",
-      });
-    }
-
-    websocketManager.broadcastToChat(
-      SocketEvents.MEMBER_REMOVED,
-      {
-        cluster_id: req.params.cluster_id,
-        removed_member_id: req.params.member_id,
-      },
-      cluster.members,
-    );
-
-    res.json({ message: "Member removed" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+  },
+);
 
 export default router;
