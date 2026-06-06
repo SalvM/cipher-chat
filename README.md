@@ -55,24 +55,40 @@ cd cipher-chat-server
 npm install
 ```
 
-3. Create `.env` file in root directory:
+3. Create environment files in root directory:
+
+**Development (`.env.dev`):**
 ```env
 MONGO_URL=mongodb://localhost:27017/cipherchat
 DB_NAME=cipherchat
 JWT_SECRET=your-super-secret-jwt-key-change-this
 ENCRYPTION_KEY=your-encryption-key-16-bytes
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-PORT=3000
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:8001
+PORT=8001
+NODE_ENV=development
 ```
+
+**Production (`.env`):**
+```env
+MONGO_URL=mongodb+srv://user:pass@cluster.mongodb.net/?ssl=true
+DB_NAME=cipherchat
+JWT_SECRET=your-super-secret-jwt-key-change-this
+ENCRYPTION_KEY=your-encryption-key-16-bytes
+CORS_ORIGINS=https://yourdomain.com
+PORT=3000
+NODE_ENV=production
+```
+
+See `.example.env` for template values.
 
 4. Start MongoDB locally or use MongoDB Atlas
 
 5. Run the server
 ```bash
-# Development
+# Development (loads .env.dev, watches for changes)
 npm run dev
 
-# Production
+# Production (loads .env)
 npm start
 ```
 
@@ -81,8 +97,11 @@ npm start
 ```
 cipher-chat-server/
 ├── server.js              # Main application entry
+├── env.js                 # Environment config loader
 ├── package.json           # Dependencies
-├── .env                   # Environment variables
+├── .env                   # Production environment variables
+├── .env.dev               # Development environment variables
+├── .example.env           # Environment template
 ├── uploads/               # Uploaded files storage
 └── README.md              # Documentation
 ```
@@ -321,14 +340,19 @@ socket.emit('message', {
 
 ## 🔧 Environment Variables
 
+Environment files are loaded based on `NODE_ENV`:
+- **`.env.dev`** — loaded when `NODE_ENV=development` (default)
+- **`.env`** — loaded when `NODE_ENV=production`
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | MONGO_URL | MongoDB connection string | Required |
 | DB_NAME | Database name | Required |
 | JWT_SECRET | Secret for JWT signing | Auto-generated if missing |
-| ENCRYPTION_KEY | 16-byte hex key for AES | Auto-generated if missing |
+| ENCRYPTION_KEY | 16-byte hex key for AES-256-GCM | Auto-generated if missing |
 | CORS_ORIGINS | Comma-separated allowed origins | * |
-| PORT | Server port | 3000 |
+| PORT | Server listen port | 3000 |
+| NODE_ENV | Environment mode (development/production) | development |
 
 ## 🧪 Testing
 

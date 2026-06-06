@@ -20,8 +20,11 @@ export const NEW_TOPIC = "new_topic";
 export const TOPIC_TYPING = "topic_typing";
 export const CLUSTER_SETTINGS_UPDATED = "cluster_settings_updated";
 export const TOPIC_SETTINGS_UPDATED = "topic_settings_updated";
+export const CLUSTER_DELETED = "cluster_deleted";
+export const TOPIC_DELETED = "topic_deleted";
 export const USER_JOINED_CLUSTER = "user_joined_cluster";
 export const USER_LEFT_CLUSTER = "user_left_cluster";
+export const MEMBER_REMOVED = "member_removed";
 
 export default {
   // Main
@@ -46,6 +49,9 @@ export default {
   TOPIC_TYPING,
   CLUSTER_SETTINGS_UPDATED,
   TOPIC_SETTINGS_UPDATED,
+  CLUSTER_DELETED,
+  TOPIC_DELETED,
   USER_JOINED_CLUSTER,
   USER_LEFT_CLUSTER,
+  MEMBER_REMOVED,
 };

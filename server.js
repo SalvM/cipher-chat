@@ -1,3 +1,5 @@
+import "./env.js";
+
 // Dependencies
 import express from "express";
 import { createServer } from "http";
@@ -8,14 +10,11 @@ import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 import bip39 from "bip39";
 import cors from "cors";
 
 import mongoose from "mongoose";
-
-import "./env.js";
 
 // Very cool logger
 import { logInfo, logStart, logDbOperation } from "./startup.js";

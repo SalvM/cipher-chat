@@ -61,7 +61,6 @@ export const logStart = (step, port = "0000") => {
       );
       console.log("");
     },
-
     middlewares: () => {
       console.log(
         `  ${colors.magenta}${icons.gear}${colors.reset} ${colors.dim}middlewares${colors.reset} ${colors.green}loaded${colors.reset} ${timestamp()}`,
@@ -134,6 +133,10 @@ export const logStart = (step, port = "0000") => {
   messages[step]?.();
 };
 
+export const logEnvironment = (environment = "development") => {
+  console.log(boxLine(`===== [${environment}] =====`));
+  console.log("");
+};
 export const logError = (error) => {
   console.log(
     `  ${colors.bright}${colors.yellow}⚠️${colors.reset} ${colors.yellow}${error}${colors.reset}`,

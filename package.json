@@ -1,6 +1,6 @@
 {
   "name": "cipher-chat-server",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Real-time chat server API with end-to-end encryption support, file sharing, and cluster-based group chats. Built with Node.js, Express, Socket.io, and MongoDB.",
   "homepage": "https://github.com/SalvM/cipher-chat-backend#readme",
   "bugs": {
@@ -15,7 +15,9 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:win": "set NODE_ENV=development && node server.js",
+    "dev:mac": "NODE_ENV=development node server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
