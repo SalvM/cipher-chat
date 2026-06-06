@@ -1,4 +1,4 @@
-import { Chat } from "./utils/db.js";
+import { Chat, Cluster } from "./utils/db.js";
 import SocketEvents from "./socketEvents.js";
 
 class ConnectionManager {
@@ -68,6 +68,26 @@ class ConnectionManager {
           SocketEvents.USER_TYPING,
           {
             chat_id: chatId,
+            is_typing: isTyping,
+          },
+        );
+      }
+    }
+  }
+
+  async broadcastTopicTyping({ userId, clusterId, topicId, isTyping }) {
+    const cluster = await Cluster.findById(clusterId).select("members").lean();
+
+    if (!cluster) return;
+    for (const member of cluster.members) {
+      if (member.toString() !== userId) {
+        this.sendPersonalMessage(
+          member.toString(),
+          SocketEvents.TOPIC_TYPING,
+          {
+            cluster_id: clusterId,
+            topic_id: topicId,
+            user_id: userId,
             is_typing: isTyping,
           },
         );
