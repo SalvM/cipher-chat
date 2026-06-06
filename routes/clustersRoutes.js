@@ -221,6 +221,105 @@ router.get(
 );
 
 /* ------------------------------------------------------------------ */
+/*  PUT /:cluster_id  –  Update cluster (name, description)            */
+/* ------------------------------------------------------------------ */
+router.put("/:cluster_id", authenticate, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.cluster_id)) {
+      return res.status(400).json({ error: "Invalid cluster ID" });
+    }
+
+    const { name, description } = req.body;
+
+    if (name === undefined && description === undefined) {
+      return res
+        .status(400)
+        .json({ error: "At least one field must be provided for update" });
+    }
+
+    if (name !== undefined) {
+      if (!name?.trim() || typeof name !== "string") {
+        return res.status(400).json({ error: "Invalid name" });
+      }
+    }
+
+    if (description !== undefined) {
+      if (!description?.trim() || typeof description !== "string") {
+        return res.status(400).json({ error: "Invalid description" });
+      }
+    }
+
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name.trim();
+    if (description !== undefined) updateFields.description = description.trim();
+
+    const cluster = await Cluster.findOneAndUpdate(
+      {
+        _id: req.params.cluster_id,
+        owner_id: req.user._id,
+      },
+      { $set: updateFields },
+      { new: true, runValidators: true },
+    ).lean();
+
+    if (!cluster) {
+      return res
+        .status(403)
+        .json({ error: "Cluster not found or user is not the owner" });
+    }
+
+    websocketManager.broadcastToChat(
+      SocketEvents.CLUSTER_SETTINGS_UPDATED,
+      { cluster },
+      cluster.members,
+    );
+
+    res.json(cluster);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/*  DELETE /:cluster_id  –  Delete cluster (owner only)               */
+/* ------------------------------------------------------------------ */
+router.delete("/:cluster_id", authenticate, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.cluster_id)) {
+      return res.status(400).json({ error: "Invalid cluster ID" });
+    }
+
+    const cluster = await Cluster.findOne({
+      _id: req.params.cluster_id,
+      owner_id: req.user._id,
+    });
+
+    if (!cluster) {
+      return res
+        .status(403)
+        .json({ error: "Cluster not found or user is not the owner" });
+    }
+
+    await Promise.all([
+      Cluster.deleteOne({ _id: req.params.cluster_id }),
+      ClusterMessage.deleteMany({ cluster_id: req.params.cluster_id }),
+    ]);
+
+    websocketManager.broadcastToChat(
+      SocketEvents.CLUSTER_DELETED,
+      { cluster_id: req.params.cluster_id },
+      cluster.members,
+    );
+
+    res.json({ message: "Cluster deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* ------------------------------------------------------------------ */
 /*  PUT /:cluster_id/topic/:topic_id  –  Update a topic's properties  */
 /* ------------------------------------------------------------------ */
 router.put("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
@@ -315,6 +414,99 @@ router.put("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
     );
 
     res.json(updatedTopic); // Return the updated topic
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/*  DELETE /:cluster_id/topics/:topic_id  –  Delete topic (owner only)*/
+/* ------------------------------------------------------------------ */
+router.delete("/:cluster_id/topics/:topic_id", authenticate, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.cluster_id)) {
+      return res.status(400).json({ error: "Invalid cluster ID" });
+    }
+    if (!isValidObjectId(req.params.topic_id)) {
+      return res.status(400).json({ error: "Invalid topic ID" });
+    }
+
+    const cluster = await Cluster.findOne({
+      _id: req.params.cluster_id,
+      owner_id: req.user._id,
+      "topics._id": req.params.topic_id,
+    });
+
+    if (!cluster) {
+      return res.status(403).json({
+        error: "Cluster not found, topic not found, or user is not the owner",
+      });
+    }
+
+    await Promise.all([
+      Cluster.findByIdAndUpdate(req.params.cluster_id, {
+        $pull: { topics: { _id: req.params.topic_id } },
+      }),
+      ClusterMessage.deleteMany({
+        cluster_id: req.params.cluster_id,
+        topic_id: req.params.topic_id,
+      }),
+    ]);
+
+    websocketManager.broadcastToChat(
+      SocketEvents.TOPIC_DELETED,
+      {
+        cluster_id: req.params.cluster_id,
+        topic_id: req.params.topic_id,
+      },
+      cluster.members,
+    );
+
+    res.json({ message: "Topic deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/*  DELETE /:cluster_id/members/:member_id  –  Remove member (owner)  */
+/* ------------------------------------------------------------------ */
+router.delete("/:cluster_id/members/:member_id", authenticate, async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.cluster_id)) {
+      return res.status(400).json({ error: "Invalid cluster ID" });
+    }
+    if (!isValidObjectId(req.params.member_id)) {
+      return res.status(400).json({ error: "Invalid member ID" });
+    }
+
+    const cluster = await Cluster.findOneAndUpdate(
+      {
+        _id: req.params.cluster_id,
+        owner_id: req.user._id,
+      },
+      { $pull: { members: req.params.member_id } },
+      { new: true },
+    ).lean();
+
+    if (!cluster) {
+      return res.status(403).json({
+        error: "Cluster not found or user is not the owner",
+      });
+    }
+
+    websocketManager.broadcastToChat(
+      SocketEvents.MEMBER_REMOVED,
+      {
+        cluster_id: req.params.cluster_id,
+        removed_member_id: req.params.member_id,
+      },
+      cluster.members,
+    );
+
+    res.json({ message: "Member removed" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

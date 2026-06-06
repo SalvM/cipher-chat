@@ -28,8 +28,8 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(404).json({ error: "Cluster not found" });
     }
 
-    const topicExists = cluster.topics.some((t) => t._id.equals(topic_id));
-    if (!topicExists) {
+    const topic = cluster.topics.find((t) => t._id.equals(topic_id));
+    if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
 
@@ -43,7 +43,7 @@ router.post("/", authenticate, async (req, res) => {
       }
     }
 
-    const clusterMessage = await ClusterMessage.create({
+    const msgData = {
       content,
       sender_id: req.user._id,
       sender_username: req.user.username,
@@ -53,7 +53,13 @@ router.post("/", authenticate, async (req, res) => {
       topic_id,
       reply_to,
       reply_to_content: replyToContent,
-    });
+    };
+
+    if (topic.disappearing_minutes) {
+      msgData.expires_at = new Date(Date.now() + topic.disappearing_minutes * 60 * 1000);
+    }
+
+    const clusterMessage = await ClusterMessage.create(msgData);
 
     const messageObj = clusterMessage.toObject();
 
@@ -264,6 +270,12 @@ router.post(
         return res.status(404).json({ error: "Cluster not found" });
       }
 
+      const topic = cluster.topics.find((t) => t._id.equals(topic_id));
+      if (!topic) {
+        await fs.unlink(req.file.path);
+        return res.status(404).json({ error: "Topic not found" });
+      }
+
       const attachment = {
         file_id: req.file.filename,
         original_name: req.file.originalname,
@@ -273,7 +285,7 @@ router.post(
         uploaded_at: new Date(),
       };
 
-      const message = await ClusterMessage.create({
+      const msgData = {
         content: content || "",
         sender_id: req.user._id,
         sender_username: req.user.username,
@@ -283,7 +295,13 @@ router.post(
         topic_id,
         reply_to,
         attachments: [attachment],
-      });
+      };
+
+      if (topic.disappearing_minutes) {
+        msgData.expires_at = new Date(Date.now() + topic.disappearing_minutes * 60 * 1000);
+      }
+
+      const message = await ClusterMessage.create(msgData);
 
       const messageObj = message.toObject();
 

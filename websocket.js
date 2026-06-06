@@ -24,12 +24,8 @@ class ConnectionManager {
   async sendPersonalMessage(userId, eventType, eventContent) {
     //console.log("[sendPersonalMessage]", { userId, eventType, eventContent });
     const socket = this.activeConnections.get(userId);
-
     if (socket) {
       socket.emit(eventType, eventContent);
-      // console.log("<<", userId, eventType);
-    } else {
-      console.error(`Socket not found for user ${userId}`);
     }
   }
 
