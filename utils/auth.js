@@ -6,7 +6,7 @@ import { User } from "./db.js";
 const JWT_SECRET =
   process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
 const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || crypto.randomBytes(16).toString("hex");
+  process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString("hex");
 
 const generateToken = (userId, username) => {
   return jwt.sign({ user_id: userId, username }, JWT_SECRET, {

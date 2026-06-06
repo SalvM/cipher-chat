@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from "uuid";
 import bip39 from "bip39";
 import cors from "cors";
 
+import mongoose from "mongoose";
+
 import "./env.js";
 
 // Very cool logger
@@ -28,6 +30,7 @@ import {
   userSchema,
 } from "./utils/schemas.js";
 import { corsOptions } from "./middlewares/cors.js";
+import { UPLOAD_DIR } from "./directories.js";
 import { hashRecoveryPhrase } from "./utils/cryption.js";
 import { storage, upload } from "./utils/upload.js";
 import websocketManager from "./websocket.js";
@@ -91,7 +94,11 @@ router.use("/users", UsersRoutes);
 
 router.get("/files/:file_id", authenticate, async (req, res) => {
   try {
-    const filePath = join(UPLOAD_DIR, req.params.file_id);
+    const safeId = path.basename(req.params.file_id);
+    if (safeId !== req.params.file_id) {
+      return res.status(400).json({ error: "Invalid file ID" });
+    }
+    const filePath = join(UPLOAD_DIR, safeId);
     await fs.access(filePath);
     res.sendFile(filePath);
   } catch (err) {
@@ -115,6 +122,7 @@ logStart("routes");
 // ===================== WebSocket =====================
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
+  if (!token) return next(new Error("Authentication error"));
   try {
     const payload = verifyToken(token);
     socket.userId = payload.user_id;

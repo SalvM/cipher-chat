@@ -8,6 +8,6 @@ export const rateLimiter = new RateLimiterMemory({
 
 export const authLimiter = expressRateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 55, // 55 in DEV, 5 in PROD
+  max: process.env.NODE_ENV === "production" ? 5 : 55,
   message: 'Too many attempts, try again later'
 });

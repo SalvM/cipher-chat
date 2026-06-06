@@ -35,10 +35,6 @@ await Promise.all([
   ClusterMessage.collection.createIndex({ cluster_id: 1, created_at: -1 }),
   ClusterMessage.collection.createIndex({ topic_id: 1, created_at: -1 }), // query for topic
   Invitation.collection.createIndex({ cluster_id: 1 }),
-  Invitation.collection.createIndex(
-    { expires_at: 1 },
-    { expireAfterSeconds: MAX_INVITATION_EXPIRING_HOURS * 60 * 60 },
-  ),
 ]);
 
 export {

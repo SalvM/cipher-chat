@@ -21,7 +21,7 @@ const chatSchema = new mongoose.Schema({
 });
 
 const messageSchema = new mongoose.Schema({
-  content: String,
+  content: { type: String, maxlength: 5000 },
   sender_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
   sender_username: String,
   sender_display_name: String,
@@ -64,7 +64,7 @@ const clusterSchema = new mongoose.Schema({
 });
 
 const clusterMessageSchema = new mongoose.Schema({
-  content: String,
+  content: { type: String, maxlength: 5000 },
   sender_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   sender_username: String,
   sender_display_name: String,

@@ -18,7 +18,7 @@ const router = express.Router();
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function validateRegisterInput({ username, password, display_name }) {
-  if (!username || typeof username !== "string" || username.trim().length < 2)
+  if (!username || typeof username !== "string" || username.trim().length < 2 || username.trim().length > 32)
     return "Invalid username";
   if (!password || typeof password !== "string" || password.length < 8)
     return "Password must be at least 8 characters";

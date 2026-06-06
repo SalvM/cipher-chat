@@ -136,7 +136,7 @@ router.post("/:cluster_id/topics", authenticate, async (req, res) => {
     }
     if (
       description !== undefined &&
-      (!description?.trim() || typeof descriptionname !== "string")
+      (!description?.trim() || typeof description !== "string")
     ) {
       return res.status(400).json({ error: "Invalid topic description" });
     }

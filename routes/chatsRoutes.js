@@ -198,7 +198,7 @@ router.get("/:chat_id/messages", authenticate, async (req, res) => {
         "_id chat_id sender_id content attachments reply_to reply_to_content edited edited_at created_at expires_at",
       )
       .sort({ created_at: -1 })
-      .limit(parseInt(limit))
+      .limit(Math.min(Math.max(parseInt(limit) || 50, 1), 100))
       .lean();
 
     messages.reverse();
