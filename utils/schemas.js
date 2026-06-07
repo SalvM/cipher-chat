@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   recovery_hash: String,
   avatar: String,
   bio: String,
+  public_key: String,
   status: { type: String, default: "offline" },
   blocked_users: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   created_at: { type: Date, default: Date.now },
@@ -100,6 +101,15 @@ const invitationSchema = new mongoose.Schema({
   expires_at: { type: Date, expires: 0, default: Date.now },
 });
 
+const conversationKeySchema = new mongoose.Schema({
+  context_type: { type: String, enum: ["chat", "cluster"], required: true },
+  context_id: { type: mongoose.Schema.Types.ObjectId, required: true },
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  encrypted_key: { type: String, required: true },
+  key_version: { type: Number, default: 1 },
+  created_at: { type: Date, default: Date.now },
+});
+
 export {
   userSchema,
   chatSchema,
@@ -107,4 +117,5 @@ export {
   clusterSchema,
   clusterMessageSchema,
   invitationSchema,
+  conversationKeySchema,
 };

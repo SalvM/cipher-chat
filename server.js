@@ -44,9 +44,10 @@ import InvitationRoutes from "./routes/invitationsRoutes.js";
 import MessagesRoutes from "./routes/messagesRoutes.js";
 import ClusterMessagesRoutes from "./routes/clusterMessagesRoutes.js";
 import UsersRoutes from "./routes/usersRoutes.js";
+import KeysRoutes from "./routes/keysRoutes.js";
 import { rateLimiter } from "./utils/limiters.js";
 import { authenticate, verifyToken } from "./utils/auth.js";
-import { Message, User } from "./utils/db.js";
+import { Chat, Cluster, Message, User } from "./utils/db.js";
 
 // ===================== Config =====================
 const app = express();
@@ -90,6 +91,7 @@ router.use("/invitations", InvitationRoutes);
 router.use("/messages", MessagesRoutes);
 router.use("/clusterMessages", ClusterMessagesRoutes);
 router.use("/users", UsersRoutes);
+router.use("/keys", KeysRoutes);
 
 router.get("/files/:file_id", authenticate, async (req, res) => {
   try {
@@ -167,6 +169,32 @@ io.on("connection", (socket) => {
       topicId: data.topicId,
       isTyping: data.isTyping,
     });
+  });
+
+  socket.on(SocketEvents.KEY_DEPOSIT_REQUESTED, async (data) => {
+    const { context_type, context_id, user_id } = data ?? {};
+    if (!context_type || !context_id || !user_id) return;
+    try {
+      const isMember =
+        context_type === "cluster"
+          ? await Cluster.exists({ _id: context_id, members: userId })
+          : await Chat.exists({ _id: context_id, participants: userId });
+      if (!isMember) return;
+
+      const ctx =
+        context_type === "cluster"
+          ? await Cluster.findById(context_id, "members").lean()
+          : await Chat.findById(context_id, "participants").lean();
+      const members = ctx?.members ?? ctx?.participants ?? [];
+
+      websocketManager.broadcastToChat(
+        SocketEvents.KEY_DEPOSIT_REQUESTED,
+        { context_type, context_id, user_id },
+        members,
+      );
+    } catch (err) {
+      console.error("[ws] KEY_DEPOSIT_REQUESTED error", err);
+    }
   });
 
   socket.on("disconnect", () => {

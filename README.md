@@ -16,7 +16,8 @@ Real-time chat server API with end-to-end encryption support, file sharing, and 
 - **User Status** - Online/offline/away/DND status
 - **Block Users** - Block/unblock other users
 - **Disappearing Messages** - Auto-delete after timer expires
-- **End-to-End Encryption** - Optional client-side encryption
+- **End-to-End Encryption** - Per-member RSA envelope key distribution, AES-256-GCM message encryption
+- **Key Rotation** - Automatic conversation key rotation on member removal
 - **Server-side Encryption** - AES-256-GCM for stored files
 
 ## 🛠️ Tech Stack
@@ -159,10 +160,25 @@ cipher-chat-server/
 | GET | `/api/clusters` | Get user clusters |
 | POST | `/api/clusters` | Create cluster |
 | GET | `/api/clusters/:cluster_id` | Get cluster details |
+| PUT | `/api/clusters/:cluster_id` | Update cluster settings (owner) |
+| DELETE | `/api/clusters/:cluster_id` | Delete cluster (owner) |
 | POST | `/api/clusters/:cluster_id/topics` | Create topic |
+| PUT | `/api/clusters/:cluster_id/topics/:topic_id` | Update topic settings (owner) |
+| DELETE | `/api/clusters/:cluster_id/topics/:topic_id` | Delete topic + messages (owner) |
 | GET | `/api/clusters/:cluster_id/topics/:topic_id/messages` | Get topic messages |
 | POST | `/api/clusters/:cluster_id/topics/:topic_id/messages` | Send topic message |
-| POST | `/api/clusters/:cluster_id/join` | Join cluster |
+| POST | `/api/clusters/:cluster_id/join` | Join cluster via invitation |
+| DELETE | `/api/clusters/:cluster_id/members/:member_id` | Remove member (owner) |
+
+### Keys (E2E Encryption)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PUT | `/api/keys/identity` | Store caller's RSA public key |
+| GET | `/api/keys/identity/:user_id` | Fetch a user's RSA public key |
+| POST | `/api/keys/conversation` | Upload encrypted key envelopes for conversation members |
+| GET | `/api/keys/conversation` | Fetch caller's encrypted conversation key envelope |
+| GET | `/api/keys/members/:cluster_id` | Fetch all cluster members with their public keys |
+| POST | `/api/keys/rotate` | Rotate cluster key after member removal |
 
 ### Health
 | Method | Endpoint | Description |
@@ -250,6 +266,23 @@ socket.emit('message', {
   settings: { disappearing_timer: 30 },
   updated_by: 'user-123'
 }
+
+// Cluster/topic settings updated
+{ type: 'cluster_settings_updated', cluster_id: 'cluster-123', ... }
+{ type: 'topic_settings_updated', cluster_id: 'cluster-123', topic_id: 'topic-123', ... }
+
+// Cluster/topic deleted
+{ type: 'cluster_deleted', cluster_id: 'cluster-123' }
+{ type: 'topic_deleted', cluster_id: 'cluster-123', topic_id: 'topic-123' }
+
+// Member events
+{ type: 'user_joined_cluster', cluster_id: 'cluster-123', user_id: 'user-123' }
+{ type: 'user_left_cluster', cluster_id: 'cluster-123', user_id: 'user-123' }
+{ type: 'member_removed', cluster_id: 'cluster-123', user_id: 'user-123' }
+
+// E2E key events
+{ type: 'cluster_key_rotated', cluster_id: 'cluster-123', new_key_version: 3 }
+{ type: 'key_deposit_requested', context_type: 'cluster', context_id: 'cluster-123', user_id: 'user-123' }
 ```
 
 ## 🔐 Security Features
@@ -274,6 +307,7 @@ socket.emit('message', {
   display_name: String,
   avatar: String,
   bio: String,
+  public_key: String,        // RSA public key (PEM/SPKI)
   status: String,
   blocked_users: [String],
   created_at: Date
@@ -325,8 +359,21 @@ socket.emit('message', {
   topics: [{
     id: String,
     name: String,
+    disappearing_minutes: Number, // optional: 1, 5, 30, 60, 1440, 10080
     created_at: Date
   }],
+  created_at: Date
+}
+```
+
+### ConversationKey
+```javascript
+{
+  context_type: 'chat' | 'cluster',
+  context_id: String,          // chat_id or cluster_id
+  user_id: String,             // envelope recipient
+  encrypted_key: String,       // RSA-OAEP encrypted AES key (base64)
+  key_version: Number,         // increments on rotation
   created_at: Date
 }
 ```
@@ -334,7 +381,7 @@ socket.emit('message', {
 ## 🚦 Rate Limits
 
 - **General API**: 100 requests per minute per IP
-- **Auth endpoints**: 5 attempts per 15 minutes
+- **Auth endpoints**: 5 attempts per 15 minutes (55 in development)
 - **File uploads**: Max 100MB per file
 - **Image uploads**: Max 25MB per file
 

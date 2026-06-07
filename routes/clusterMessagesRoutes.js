@@ -13,9 +13,9 @@ const router = express.Router();
 
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { content, cluster_id, topic_id, reply_to } = req.body;
+    const { content, cluster_id, topic_id, reply_to, reply_to_content: clientReplyContent, key_version } = req.body;
 
-    if (!content?.trim()) {
+    if (typeof content !== "string" || content.length === 0 || content.length > 8192) {
       return res.status(400).json({ error: "Content is required" });
     }
 
@@ -33,15 +33,7 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(404).json({ error: "Topic not found" });
     }
 
-    let replyToContent = null;
-    if (reply_to) {
-      const replyMsg = await ClusterMessage.findById(reply_to)
-        .select("sender_display_name content")
-        .lean();
-      if (replyMsg) {
-        replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, 100)}`;
-      }
-    }
+    const replyToContent = reply_to ? (clientReplyContent ?? null) : null;
 
     const msgData = {
       content,
@@ -53,6 +45,7 @@ router.post("/", authenticate, async (req, res) => {
       topic_id,
       reply_to,
       reply_to_content: replyToContent,
+      key_version,
     };
 
     if (topic.disappearing_minutes) {
@@ -78,12 +71,16 @@ router.post("/", authenticate, async (req, res) => {
 
 router.put("/:message_id", authenticate, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, key_version } = req.body;
     const edited_at = new Date();
+
+    if (typeof content !== "string" || content.length === 0 || content.length > 8192) {
+      return res.status(400).json({ error: "Content is required" });
+    }
 
     const message = await ClusterMessage.findOneAndUpdate(
       { _id: req.params.message_id, sender_id: req.user._id },
-      { $set: { content, edited: true, edited_at } },
+      { $set: { content, edited: true, edited_at, ...(key_version !== undefined && { key_version }) } },
       { lean: true },
     );
 
@@ -258,7 +255,7 @@ router.post(
   upload.single("file"),
   async (req, res) => {
     try {
-      const { content, cluster_id, topic_id, reply_to } = req.body;
+      const { content, cluster_id, topic_id, reply_to, reply_to_content: clientReplyContent, key_version } = req.body;
 
       const cluster = await Cluster.findOne({
         _id: cluster_id,
@@ -294,7 +291,9 @@ router.post(
         cluster_id,
         topic_id,
         reply_to,
+        reply_to_content: reply_to ? (clientReplyContent ?? null) : null,
         attachments: [attachment],
+        key_version,
       };
 
       if (topic.disappearing_minutes) {

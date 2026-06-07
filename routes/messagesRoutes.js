@@ -12,8 +12,6 @@ import { authenticate } from "../utils/auth.js";
 
 const router = express.Router();
 
-const REPLY_PREVIEW_LENGTH = 100;
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function isValidObjectId(id) {
@@ -87,14 +85,10 @@ async function saveAndBroadcast(messageData, chat, res) {
  */
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { content, chat_id, reply_to } = req.body;
+    const { content, chat_id, reply_to, reply_to_content: clientReplyContent, key_version } = req.body;
     const disappearing_minutes = parseInt(req.body.disappearing_minutes ?? 0);
 
-    if (
-      !content ||
-      typeof content !== "string" ||
-      content.trim().length === 0
-    ) {
+    if (typeof content !== "string" || content.length === 0 || content.length > 8192) {
       return res.status(400).json({ error: "Content is required" });
     }
 
@@ -113,19 +107,10 @@ router.post("/", authenticate, async (req, res) => {
         .json({ error: "Cannot send message to this user" });
     }
 
-    let replyToContent = null;
-    if (reply_to) {
-      if (!isValidObjectId(reply_to)) {
-        return res.status(400).json({ error: "Invalid reply_to" });
-      }
-      const replyMsg = await Message.findOne(
-        { _id: reply_to },
-        "sender_display_name content",
-      ).lean();
-      if (replyMsg) {
-        replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, REPLY_PREVIEW_LENGTH)}`;
-      }
+    if (reply_to && !isValidObjectId(reply_to)) {
+      return res.status(400).json({ error: "Invalid reply_to" });
     }
+    const replyToContent = reply_to ? (clientReplyContent ?? null) : null;
 
     const expiresAt =
       !isNaN(disappearing_minutes) && disappearing_minutes > 0
@@ -134,7 +119,7 @@ router.post("/", authenticate, async (req, res) => {
 
     const messageObject = await saveAndBroadcast(
       {
-        content: content.trim(),
+        content,
         sender_id: req.user._id,
         sender_username: req.user.username,
         sender_display_name: req.user.display_name,
@@ -143,6 +128,7 @@ router.post("/", authenticate, async (req, res) => {
         reply_to: reply_to || undefined,
         reply_to_content: replyToContent,
         expires_at: expiresAt,
+        key_version,
       },
       chat,
       res,
@@ -160,13 +146,9 @@ router.post("/", authenticate, async (req, res) => {
  */
 router.put("/:message_id", authenticate, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, key_version } = req.body;
 
-    if (
-      !content ||
-      typeof content !== "string" ||
-      content.trim().length === 0
-    ) {
+    if (typeof content !== "string" || content.length === 0 || content.length > 8192) {
       return res.status(400).json({ error: "Content is required" });
     }
 
@@ -190,7 +172,7 @@ router.put("/:message_id", authenticate, async (req, res) => {
       Message.updateOne(
         { _id: message._id },
         {
-          $set: { content: content.trim(), edited: true, edited_at: editedAt },
+          $set: { content, edited: true, edited_at: editedAt, ...(key_version !== undefined && { key_version }) },
         },
       ),
     ]);
@@ -201,7 +183,7 @@ router.put("/:message_id", authenticate, async (req, res) => {
         {
           chat_id: chat._id,
           message_id: message._id,
-          content: content.trim(),
+          content,
           edited_at: editedAt,
         },
         chat.participants,
@@ -210,7 +192,7 @@ router.put("/:message_id", authenticate, async (req, res) => {
 
     res
       .status(204)
-      .json({ _id: message._id, content: content.trim(), edited: true });
+      .json({ _id: message._id, content, edited: true });
   } catch (err) {
     console.error("[messagesRoutes] PUT /:message_id", err);
     res.status(500).json({ error: "Server error" });
@@ -388,7 +370,7 @@ router.post(
   upload.single("file"),
   async (req, res) => {
     try {
-      const { content, chat_id, reply_to } = req.body;
+      const { content, chat_id, reply_to, reply_to_content: clientReplyContent, key_version } = req.body;
 
       if (!chat_id || !isValidObjectId(chat_id)) {
         if (req.file) await fs.unlink(req.file.path).catch(console.error);
@@ -412,20 +394,11 @@ router.post(
           .json({ error: "Cannot send message to this user" });
       }
 
-      let replyToContent = null;
-      if (reply_to) {
-        if (!isValidObjectId(reply_to)) {
-          await fs.unlink(req.file.path).catch(console.error);
-          return res.status(400).json({ error: "Invalid reply_to" });
-        }
-        const replyMsg = await Message.findOne(
-          { _id: reply_to },
-          "sender_display_name content",
-        ).lean();
-        if (replyMsg) {
-          replyToContent = `${replyMsg.sender_display_name}: ${replyMsg.content.substring(0, REPLY_PREVIEW_LENGTH)}`;
-        }
+      if (reply_to && !isValidObjectId(reply_to)) {
+        await fs.unlink(req.file.path).catch(console.error);
+        return res.status(400).json({ error: "Invalid reply_to" });
       }
+      const replyToContent = reply_to ? (clientReplyContent ?? null) : null;
 
       const messageObject = await saveAndBroadcast(
         {
@@ -438,6 +411,7 @@ router.post(
           reply_to: reply_to || undefined,
           reply_to_content: replyToContent,
           attachments: [buildAttachment(req.file)],
+          key_version,
         },
         chat,
         res,
