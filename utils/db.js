@@ -6,10 +6,11 @@ import {
   clusterSchema,
   clusterMessageSchema,
   invitationSchema,
+  conversationKeySchema,
 } from "./schemas.js";
 import { logStart } from "../startup.js";
 
-const USER_PUBLIC_PROJECTION = "_id username display_name avatar status";
+const USER_PUBLIC_PROJECTION = "_id username display_name avatar status public_key";
 const USER_PRIVATE_PROJECTION =
   "_id username display_name avatar bio status blocked_users";
 const VALID_STATUSES = ["online", "away", "dnd", "invisible", "offline"];
@@ -26,6 +27,7 @@ const Message = mongoose.model("Message", messageSchema);
 const Cluster = mongoose.model("Cluster", clusterSchema);
 const ClusterMessage = mongoose.model("ClusterMessage", clusterMessageSchema);
 const Invitation = mongoose.model("Invitation", invitationSchema);
+const ConversationKey = mongoose.model("ConversationKey", conversationKeySchema);
 
 // Create indexes
 await Promise.all([
@@ -35,6 +37,11 @@ await Promise.all([
   ClusterMessage.collection.createIndex({ cluster_id: 1, created_at: -1 }),
   ClusterMessage.collection.createIndex({ topic_id: 1, created_at: -1 }), // query for topic
   Invitation.collection.createIndex({ cluster_id: 1 }),
+  ConversationKey.collection.createIndex(
+    { context_type: 1, context_id: 1, user_id: 1 },
+    { unique: true },
+  ),
+  ConversationKey.collection.createIndex({ context_id: 1, key_version: 1 }),
 ]);
 
 export {
@@ -44,6 +51,7 @@ export {
   Cluster,
   ClusterMessage,
   Invitation,
+  ConversationKey,
   USER_PUBLIC_PROJECTION,
   USER_PRIVATE_PROJECTION,
   VALID_STATUSES,

@@ -25,6 +25,8 @@ export const TOPIC_DELETED = "topic_deleted";
 export const USER_JOINED_CLUSTER = "user_joined_cluster";
 export const USER_LEFT_CLUSTER = "user_left_cluster";
 export const MEMBER_REMOVED = "member_removed";
+export const CLUSTER_KEY_ROTATED = "cluster_key_rotated";
+export const KEY_DEPOSIT_REQUESTED = "key_deposit_requested";
 
 export default {
   // Main
@@ -54,4 +56,6 @@ export default {
   USER_JOINED_CLUSTER,
   USER_LEFT_CLUSTER,
   MEMBER_REMOVED,
+  CLUSTER_KEY_ROTATED,
+  KEY_DEPOSIT_REQUESTED,
 };
