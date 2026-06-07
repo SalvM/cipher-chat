@@ -4,6 +4,7 @@ import ClusterView from '@/components/Chat/ClusterView';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
+import { m } from 'framer-motion';
 import { useEffect } from 'react';
 
 export default function ChatPage() {
@@ -70,7 +71,7 @@ export default function ChatPage() {
         )}
 
         {/* Cluster chat feed */}
-        {selectedTab === 'cluster' && selectedClusterId && user?._id && (
+        {selectedTab === 'cluster' && user?._id && (
           <ClusterView clusterId={selectedClusterId} userId={user._id} />
         )}
       </div>

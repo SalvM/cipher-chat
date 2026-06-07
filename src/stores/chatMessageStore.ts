@@ -10,6 +10,18 @@ import type {
   ChatMessageMap,
 } from '@/types/storeTypes';
 import { chatMessageArrayToMapConverter } from '@/utils/messageUtils';
+import { CryptoService } from '@/services/CryptoService';
+import { keyService } from '@/services/KeyService';
+import { useConversationStore } from '@/stores/conversationStore';
+import { useAuthStore } from '@/stores/authStore';
+
+async function decryptSafe(key: CryptoKey, b64: string): Promise<string> {
+  try {
+    return await CryptoService.decryptMessage(key, b64);
+  } catch {
+    return '[Encrypted message]';
+  }
+}
 
 interface ChatMessageStore {
   messages: ChatMessagesState;
@@ -28,7 +40,7 @@ interface ChatMessageStore {
     content: string;
     disappearingMinutes: number;
     replyToId?: ID;
-  }) => GenericApiResponse; // Send a new message from form submit
+  }) => GenericApiResponse;
 
   sendMessageWithAttachment: (data: {
     chatId: ID;
@@ -36,7 +48,7 @@ interface ChatMessageStore {
     file: Blob;
     disappearingMinutes: number;
     replyToId?: ID;
-  }) => GenericApiResponse; // ... with attachment
+  }) => GenericApiResponse;
 
   editMessage: (
     chatId: ID,
@@ -48,13 +60,10 @@ interface ChatMessageStore {
 
   addReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
   removeReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
-
-  // Cleaaning (for LRU)
-  // clearChat: (chatId: ID) => void;
 }
 
 interface ChatMessageStoreWSActions {
-  addMessageFromWs: (message: Message) => void; // Add a message from WS
+  addMessageFromWs: (message: Message) => void;
   updateMessageFromWs: (messageUpdated: {
     chatId: ID;
     messageId: ID;
@@ -99,7 +108,30 @@ export const useChatMessageStore = create<
       const responseData = await api.get<{ messages: Message[] }>(
         `/chats/${chatId}/messages`
       );
-      get().setChatMessages(chatId, responseData?.messages ?? []);
+      const raw = responseData?.messages ?? [];
+
+      const chat = useConversationStore.getState().chats[chatId];
+      const otherUserId = chat?.otherUser?._id;
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [selfId, otherUserId].filter(Boolean) as ID[];
+
+      let messages = raw;
+      try {
+        const ck = await keyService.getConversationKey('chat', chatId, memberIds);
+        messages = await Promise.all(
+          raw.map(async (msg) => ({
+            ...msg,
+            content: await decryptSafe(ck.key, msg.content),
+            ...(msg.reply_to_content && {
+              reply_to_content: await decryptSafe(ck.key, msg.reply_to_content),
+            }),
+          }))
+        );
+      } catch (e) {
+        console.warn('[fetchMessages] Cannot acquire CK, showing raw content', e);
+      }
+
+      get().setChatMessages(chatId, messages);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
     } finally {
@@ -110,12 +142,37 @@ export const useChatMessageStore = create<
   sendMessage: async (data) => {
     const { chatId, content, disappearingMinutes, replyToId } = data;
     try {
+      const chat = useConversationStore.getState().chats[chatId];
+      const otherUserId = chat?.otherUser?._id;
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [selfId, otherUserId].filter(Boolean) as ID[];
+
+      const ck = await keyService.getConversationKey('chat', chatId, memberIds);
+      if (!ck) return { success: false, error: 'Encryption key not yet available. Try again shortly.' };
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
+      let encReplyContent: string | undefined;
+      if (replyToId) {
+        const orig = get().messages[chatId]?.[replyToId];
+        if (orig?.content) {
+          try {
+            // orig.content is already plaintext (decrypted in store)
+            encReplyContent = await CryptoService.encryptMessage(
+              ck.key,
+              orig.content.slice(0, 100)
+            );
+          } catch { /* best-effort */ }
+        }
+      }
+
       await api.post<Message>('/messages', {
         body: {
-          content,
+          content: encContent,
           chat_id: chatId,
           disappearing_minutes: disappearingMinutes,
           reply_to: replyToId ?? null,
+          ...(encReplyContent ? { reply_to_content: encReplyContent } : {}),
+          key_version: ck.version,
         },
       });
       return { success: true };
@@ -131,11 +188,21 @@ export const useChatMessageStore = create<
   sendMessageWithAttachment: async (data) => {
     const { chatId, content, file, disappearingMinutes, replyToId } = data;
     try {
+      const chat = useConversationStore.getState().chats[chatId];
+      const otherUserId = chat?.otherUser?._id;
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [selfId, otherUserId].filter(Boolean) as ID[];
+
+      const ck = await keyService.getConversationKey('chat', chatId, memberIds);
+      if (!ck) return { success: false, error: 'Encryption key not yet available. Try again shortly.' };
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
       const formData = new FormData();
-      formData.append('content', content);
+      formData.append('content', encContent);
       formData.append('chat_id', chatId);
       formData.append('disappearing_minutes', disappearingMinutes?.toString());
       formData.append('file', file);
+      formData.append('key_version', ck.version.toString());
       if (replyToId) {
         formData.append('reply_to', replyToId);
       }
@@ -157,7 +224,13 @@ export const useChatMessageStore = create<
     try {
       const existing = get().messages[chatId];
       if (!existing) throw existing;
-      await api.put(`/messages/${messageId}`, { body: { content } });
+
+      const ck = await keyService.getConversationKey('chat', chatId);
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
+      await api.put(`/messages/${messageId}`, {
+        body: { content: encContent, key_version: ck.version },
+      });
       set({
         messages: {
           ...get().messages,
@@ -171,7 +244,7 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.data?.detail ?? 'Failed to send message',
+        error: error.data?.detail ?? 'Failed to edit message',
       };
     }
   },
@@ -188,12 +261,11 @@ export const useChatMessageStore = create<
     } catch (error: any) {
       return {
         success: false,
-        error: error.data?.detail ?? 'Failed to send message',
+        error: error.data?.detail ?? 'Failed to delete message',
       };
     }
   },
 
-  // Message reactions
   addReaction: async (messageId, emoji) => {
     try {
       await api.post(`/messages/${messageId}/reactions`, { body: { emoji } });
@@ -220,7 +292,7 @@ export const useChatMessageStore = create<
     }
   },
 
-  // WebSocket updates
+  // WebSocket actions — content is already decrypted before these are called
   addMessageFromWs: (message: Message) => {
     const chatId = message?.chat_id ?? null;
     if (!chatId) return;

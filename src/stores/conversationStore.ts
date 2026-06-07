@@ -5,6 +5,8 @@ import type { Message } from '@/types/messageTypes';
 import type { ChatType, ID } from '@/types/utilityTypes';
 import type { User } from '@/types/userTypes';
 import { create } from 'zustand';
+import { keyService } from '@/services/KeyService';
+import { useAuthStore } from '@/stores/authStore';
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
@@ -268,6 +270,17 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         selectedTab: 'cluster',
       });
       clusterId = responseData._id;
+
+      const selfId = useAuthStore.getState().user?._id;
+      if (selfId) {
+        try {
+          await keyService.getConversationKey('cluster', responseData._id, [
+            selfId,
+          ]);
+        } catch (e) {
+          console.error('[createCluster] CK init failed', e);
+        }
+      }
     } catch (e) {
       console.error('[createCluster]', e);
     } finally {

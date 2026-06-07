@@ -12,17 +12,27 @@ import type {
 } from '@/types/storeTypes';
 import { clusterMessageArrayToMapConverter } from '@/utils/messageUtils';
 import { EMPTY_MESSAGES } from '@/utils';
+import { CryptoService } from '@/services/CryptoService';
+import { keyService } from '@/services/KeyService';
+import { useConversationStore } from '@/stores/conversationStore';
+import { useAuthStore } from '@/stores/authStore';
+
+async function decryptSafe(key: CryptoKey, b64: string): Promise<string> {
+  try {
+    return await CryptoService.decryptMessage(key, b64);
+  } catch {
+    return '[Encrypted message]';
+  }
+}
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface ClusterMessageStore {
   messages: ClusterMessagesState;
   loadingMessages: ClusterLoadingState;
 
-  // Loading
   setLoadingMessages: (clusterId: ID, topicId: ID, isLoading: boolean) => void;
   getLoadingMessage: (clusterId: ID, topicId: ID) => boolean;
 
-  // Getters / setters
   setTopicMessages: (
     clusterId: ID,
     topicId: ID,
@@ -30,10 +40,8 @@ interface ClusterMessageStore {
   ) => void;
   getTopicMessages: (clusterId: ID, topicId: ID) => TopicMessageMap;
 
-  // Fetch
   fetchMessages: (clusterId: ID, topicId: ID) => Promise<void>;
 
-  // API mutations
   sendMessage: (data: {
     clusterId: ID;
     topicId: ID;
@@ -65,7 +73,6 @@ interface ClusterMessageStore {
   addReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
   removeReaction: (messageId: ID, emoji: Emoji) => GenericApiResponse;
 
-  // Cleaning (for LRU)
   clearTopic: (clusterId: ID, topicId: ID) => void;
   clearCluster: (clusterId: ID) => void;
 }
@@ -146,7 +153,41 @@ export const useClusterMessageStore = create<
       const responseData = await api.get<{ messages: ClusterMessage[] }>(
         `/clusters/${clusterId}/topics/${topicId}/messages`
       );
-      get().setTopicMessages(clusterId, topicId, responseData?.messages ?? []);
+      const raw = responseData?.messages ?? [];
+
+      const cluster = useConversationStore.getState().clusters[clusterId];
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [
+        ...(cluster?.member_details?.map((m) => m._id) ??
+          cluster?.members?.map((m) => m._id) ??
+          []),
+      ];
+      if (selfId && !memberIds.includes(selfId)) memberIds.push(selfId);
+
+      let messages = raw;
+      try {
+        const ck = await keyService.getConversationKey(
+          'cluster',
+          clusterId,
+          memberIds
+        );
+        messages = await Promise.all(
+          raw.map(async (msg) => ({
+            ...msg,
+            content: await decryptSafe(ck.key, msg.content),
+            ...(msg.reply_to_content && {
+              reply_to_content: await decryptSafe(ck.key, msg.reply_to_content),
+            }),
+          }))
+        );
+      } catch (e) {
+        console.warn(
+          '[fetchClusterMessages] Cannot acquire CK, showing raw content',
+          e
+        );
+      }
+
+      get().setTopicMessages(clusterId, topicId, messages);
     } catch (error) {
       console.error('Failed to fetch cluster messages:', error);
     } finally {
@@ -160,12 +201,51 @@ export const useClusterMessageStore = create<
   // default expiry configured server-side.
   sendMessage: async ({ clusterId, topicId, content, replyToId }) => {
     try {
+      const cluster = useConversationStore.getState().clusters[clusterId];
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [
+        ...(cluster?.member_details?.map((m) => m._id) ??
+          cluster?.members?.map((m) => m._id) ??
+          []),
+      ];
+      if (selfId && !memberIds.includes(selfId)) memberIds.push(selfId);
+
+      const ck = await keyService.getConversationKey(
+        'cluster',
+        clusterId,
+        memberIds
+      );
+      if (!ck)
+        return {
+          success: false,
+          error: 'Encryption key not yet available. Try again shortly.',
+        };
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
+      let encReplyContent: string | undefined;
+      if (replyToId) {
+        const orig = get().messages[clusterId]?.[topicId]?.[replyToId];
+        if (orig?.content) {
+          try {
+            // orig.content is already plaintext (decrypted in store)
+            encReplyContent = await CryptoService.encryptMessage(
+              ck.key,
+              orig.content.slice(0, 100)
+            );
+          } catch {
+            /* best-effort */
+          }
+        }
+      }
+
       await api.post<ClusterMessage>(`/clusterMessages`, {
         body: {
-          content,
+          content: encContent,
           cluster_id: clusterId,
           topic_id: topicId,
           reply_to: replyToId ?? null,
+          ...(encReplyContent ? { reply_to_content: encReplyContent } : {}),
+          key_version: ck.version,
         },
       });
       return { success: true };
@@ -186,12 +266,34 @@ export const useClusterMessageStore = create<
     replyToId,
   }) => {
     try {
+      const cluster = useConversationStore.getState().clusters[clusterId];
+      const selfId = useAuthStore.getState().user?._id;
+      const memberIds = [
+        ...(cluster?.member_details?.map((m) => m._id) ??
+          cluster?.members?.map((m) => m._id) ??
+          []),
+      ];
+      if (selfId && !memberIds.includes(selfId)) memberIds.push(selfId);
+
+      const ck = await keyService.getConversationKey(
+        'cluster',
+        clusterId,
+        memberIds
+      );
+      if (!ck)
+        return {
+          success: false,
+          error: 'Encryption key not yet available. Try again shortly.',
+        };
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
       const formData = new FormData();
-      formData.append('content', content);
+      formData.append('content', encContent);
       formData.append('cluster_id', clusterId);
       formData.append('topic_id', topicId);
       if (replyToId) formData.append('reply_to', replyToId);
       formData.append('file', file);
+      formData.append('key_version', ck.version.toString());
 
       await api.post<ClusterMessage>(`/clusterMessages/with-attachment`, {
         body: formData,
@@ -211,7 +313,13 @@ export const useClusterMessageStore = create<
     try {
       const existing = get().messages[clusterId]?.[topicId];
       if (!existing) throw new Error('Topic not loaded');
-      await api.put(`/clusterMessages/${messageId}`, { body: { content } });
+
+      const ck = await keyService.getConversationKey('cluster', clusterId);
+      const encContent = await CryptoService.encryptMessage(ck.key, content);
+
+      await api.put(`/clusterMessages/${messageId}`, {
+        body: { content: encContent, key_version: ck.version },
+      });
       set({
         messages: {
           ...get().messages,
@@ -304,12 +412,12 @@ export const useClusterMessageStore = create<
     set({ messages: updated });
   },
 
-  // ── WebSocket ──────────────────────────────────────────────────────────────
+  // ── WebSocket (content already decrypted before these are called) ──────────
 
   addMessageFromWs: ({ clusterId, topicId, message }) => {
     if (!clusterId || !topicId) return;
     const topicMessages = get().messages[clusterId]?.[topicId];
-    if (!topicMessages) return; // topic not loaded, skip — it will arrive on next fetch
+    if (!topicMessages) return;
     set({
       messages: {
         ...get().messages,

@@ -25,6 +25,7 @@ export interface Message {
   content: string;
   reply_to_id?: ID;
   reply_to_content?: string;
+  key_version?: number;
   edited: boolean;
   expires_at?: Timestamp;
   reactions: MessageReactions | null;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import * as DropdownPrimitive from '@radix-ui/react-dropdown-menu';
 import { Hash, Users, Plus, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useConversationStore } from '@/stores/conversationStore';
-import { useClusterMessageStore } from '@/stores/clusterMessageStore';
 import type { Topic } from '@/types/clusterTypes';
 import type { ID } from '@/types/utilityTypes';
 import { cn } from '@/utils';
@@ -23,12 +22,15 @@ import { ConfirmDialog } from '../Common/ConfirmDialog';
 import TimerSelector from '../Common/TimerSelector';
 
 interface ClusterViewProps {
-  clusterId: ID;
+  clusterId: ID | null;
   userId: ID;
 }
 
 const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
-  const currentCluster = useConversationStore((s) => s.getCurrentCluster());
+  const currentCluster = useConversationStore((s) =>
+    clusterId ? s.clusters[clusterId] : null
+  );
+
   const {
     selectedTopicId,
     setSelectedTopicId,
@@ -52,13 +54,13 @@ const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
     setSelectedTopicId(topicId);
   };
 
-  const currentTopic = useMemo(
-    () => currentCluster?.topics?.find((t) => t._id === selectedTopicId),
-    [currentCluster, selectedTopicId]
-  );
+  const currentTopic = useMemo(() => {
+    if (!selectedTopicId || !currentCluster) return null;
+    return currentCluster?.topics?.find((t) => t._id === selectedTopicId);
+  }, [currentCluster, selectedTopicId]);
 
   const isClusterOwner = useMemo(() => {
-    if (!userId) return false;
+    if (!userId || !currentCluster) return false;
     return currentCluster?.owner_id === userId;
   }, [userId, currentCluster]);
 
@@ -267,7 +269,7 @@ const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
         {/* Messages */}
         {currentTopic && (
           <ClusterMessageFeed
-            clusterId={clusterId}
+            clusterId={currentCluster._id}
             topicId={currentTopic._id}
             userId={userId}
           />
@@ -276,14 +278,14 @@ const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
 
       {/* Dialogs */}
       <NewTopicDialog
-        clusterId={clusterId}
+        clusterId={currentCluster._id}
         clusterName={currentCluster.name}
         dialogOpen={showAddTopic}
         onCreated={handleCreateTopic}
         closeDialog={() => setShowAddTopic(false)}
       />
       <NewInvitationDialog
-        clusterId={clusterId}
+        clusterId={currentCluster._id}
         dialogOpen={showCreateInvitation}
         closeDialog={() => setShowCreateInvitation(false)}
       />

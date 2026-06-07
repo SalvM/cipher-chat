@@ -4,6 +4,9 @@ import type { User } from '@/types/userTypes';
 import type { Status } from '@/types/utilityTypes';
 import { parseUserFromAPI } from '@/utils/userUtils';
 import { create } from 'zustand';
+import { CryptoService } from '@/services/CryptoService';
+import { useCryptoStore } from '@/stores/cryptoStore';
+import { keyService } from '@/services/KeyService';
 
 export interface AuthStoreState {
   user: User | null;
@@ -22,6 +25,7 @@ export interface AuthStoreActions {
     displayName: string
   ) => Promise<AuthResponse>;
   initialize: () => void;
+  fetchCurrentUser: () => Promise<void>;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
 }
@@ -71,6 +75,18 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         const { token, user } = responseData;
         localStorage.setItem('token', token);
         set({ token, user, isAuthenticated: true, isLoading: false });
+
+        try {
+          const kp = await CryptoService.generateIdentityKeypair();
+          const pub = await CryptoService.exportPublicKey(kp.publicKey);
+          await api.put('/keys/identity', { body: { public_key: pub } });
+          const bundle = await CryptoService.encryptPrivateKey(kp.privateKey, password);
+          localStorage.setItem('privateKeyBundle', bundle);
+          useCryptoStore.getState().setPrivateKey(kp.privateKey);
+        } catch (e) {
+          console.error('[register] crypto setup failed', e);
+        }
+
         return { success: true };
       } catch (error: any) {
         const message = error.data?.detail ?? 'Registration failed';
@@ -98,6 +114,29 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
             isLoading: false,
             isAuthenticated: true,
           });
+
+          const bundle = localStorage.getItem('privateKeyBundle');
+          if (bundle) {
+            try {
+              const pk = await CryptoService.decryptPrivateKey(bundle, password);
+              useCryptoStore.getState().setPrivateKey(pk);
+            } catch {
+              // Corrupted bundle or new device — fall through to keypair generation
+            }
+          }
+
+          if (!useCryptoStore.getState().isUnlocked) {
+            try {
+              const kp = await CryptoService.generateIdentityKeypair();
+              const pub = await CryptoService.exportPublicKey(kp.publicKey);
+              await api.put('/keys/identity', { body: { public_key: pub } });
+              const nb = await CryptoService.encryptPrivateKey(kp.privateKey, password);
+              localStorage.setItem('privateKeyBundle', nb);
+              useCryptoStore.getState().setPrivateKey(kp.privateKey);
+            } catch (e) {
+              console.error('[login] new device keypair generation failed', e);
+            }
+          }
         }
         return { success: true };
       } catch (error: any) {
@@ -116,6 +155,10 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
       try {
         const user = await api.get<User>('/auth/me');
         set({ user: user, isLoading: false });
+        if (!useCryptoStore.getState().isUnlocked) {
+          const pk = await CryptoService.importPrivateKeyFromSession();
+          if (pk) useCryptoStore.getState().setPrivateKey(pk);
+        }
       } catch (error) {
         localStorage.removeItem('token');
         set({ token: null, user: null, isLoading: false });
@@ -149,6 +192,10 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
     logout: () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('privateKeyBundle');
+      CryptoService.clearSessionKey();
+      useCryptoStore.getState().clearPrivateKey();
+      keyService.clearAll();
       set({ token: null, isAuthenticated: false, user: null });
     },
   })
