@@ -1,4 +1,5 @@
 import express from "express";
+import { Types } from "mongoose";
 import {
   Chat,
   Message,
@@ -169,6 +170,89 @@ router.get("/", authenticate, async (req, res) => {
     }));
 
     res.json({ chats: enriched });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/:chat_id", authenticate, async (req, res) => {
+  try {
+    const chat = await Chat.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(req.params.chat_id),
+          participants: req.user._id,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "messages",
+          let: { chatId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$chat_id", "$$chatId"] } } },
+            { $sort: { created_at: -1 } },
+            { $limit: 1 },
+          ],
+          as: "last_message",
+        },
+      },
+      { $unwind: { path: "$last_message", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            otherId: {
+              $arrayElemAt: [
+                {
+                  $filter: {
+                    input: "$participants",
+                    as: "p",
+                    cond: { $ne: ["$$p", req.user._id] },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$otherId"] } } },
+            {
+              $project: {
+                _id: 1,
+                username: 1,
+                display_name: 1,
+                avatar: 1,
+                status: 1,
+              },
+            },
+          ],
+          as: "otherUser",
+        },
+      },
+      { $unwind: { path: "$otherUser", preserveNullAndEmptyArrays: true } },
+    ]);
+
+    if (!chat || chat.length === 0) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    const enriched = {
+      ...chat[0],
+      otherUser: chat[0].otherUser
+        ? {
+            ...chat[0].otherUser,
+            status:
+              websocketManager.userStatus.get(
+                chat[0].otherUser._id.toString(),
+              ) ?? chat[0].otherUser.status,
+          }
+        : null,
+    };
+
+    res.json(enriched);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
