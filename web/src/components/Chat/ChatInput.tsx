@@ -1,0 +1,100 @@
+import { Send } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useEffect, useRef, useState, type SubmitEventHandler } from 'react';
+import FileInput from '@/components/Common/FileInput';
+import { ChatFilePreview } from './ChatFilePreview';
+import { Button } from '@/components/ui/button';
+import TimerSelector from '@/components/Common/TimerSelector';
+
+export interface ChatInputProps {
+  disabled: boolean;
+  initialValue?: string;
+  onBlur?: (message: string) => void;
+  onTimerChange?: (minutes: number) => void;
+  onSendMessage: (message: string, file: File | null) => void;
+  handleTyping: (isTyping: boolean) => void;
+  chatDisappearingMinutes?: number | null;
+}
+export const ChatInput = ({
+  disabled,
+  onBlur,
+  onSendMessage,
+  onTimerChange,
+  handleTyping,
+  initialValue,
+  chatDisappearingMinutes,
+}: ChatInputProps) => {
+  const [messageInput, setMessageInput] = useState(initialValue ?? '');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageInput(e.target.value);
+    handleTyping(e.target.value?.length > 0);
+  };
+
+  const handleInputBlur = () => onBlur?.(messageInput.trim());
+
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
+    e.preventDefault();
+    onSendMessage(messageInput?.trim(), selectedFile);
+    setMessageInput('');
+    setSelectedFile(null);
+    handleTyping(false);
+  };
+
+  useEffect(() => {
+    if (!disabled) {
+      inputRef.current?.focus();
+    }
+  }, [disabled]);
+
+  return (
+    <>
+      <ChatFilePreview
+        filePreview={selectedFile}
+        resetFilePreview={() => setSelectedFile(null)}
+      />
+
+      <div className="p-2 border-t border-white/5 w-full rounded-md border bg-elevated font-sans text-text-primary">
+        <form
+          onSubmit={handleSubmit}
+          className="max-w-3xl mx-auto flex items-center gap-3"
+        >
+          {onTimerChange && (
+            <TimerSelector
+              initialValue={chatDisappearingMinutes}
+              onChange={onTimerChange}
+            />
+          )}
+          <FileInput disabled={disabled} onFileChange={setSelectedFile} />
+
+          <Input
+            ref={inputRef}
+            value={messageInput}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            placeholder={`Send a message...`}
+            className="flex-1 bg-elevated border-none rounded-md px-2 py-2 h-4"
+            disabled={disabled}
+            data-testid="message-input"
+          />
+
+          <Button
+            type="submit"
+            size="icon"
+            disabled={(!messageInput.trim() && !selectedFile) || disabled}
+            className="rounded-full"
+            data-testid="send-message-btn"
+          >
+            {disabled ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
+        </form>
+      </div>
+    </>
+  );
+};
