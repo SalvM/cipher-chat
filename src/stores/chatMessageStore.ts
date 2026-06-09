@@ -296,8 +296,7 @@ export const useChatMessageStore = create<
   addMessageFromWs: (message: Message) => {
     const chatId = message?.chat_id ?? null;
     if (!chatId) return;
-    const chatMessages = get().messages[chatId];
-    if (!chatMessages) return;
+    const chatMessages = get().messages[chatId] ?? {};
     set({
       messages: {
         ...get().messages,

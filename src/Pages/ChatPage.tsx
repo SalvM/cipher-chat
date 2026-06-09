@@ -4,7 +4,6 @@ import ClusterView from '@/components/Chat/ClusterView';
 import { useSocket } from '@/hooks/useSocket';
 import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
-import { m } from 'framer-motion';
 import { useEffect } from 'react';
 
 export default function ChatPage() {

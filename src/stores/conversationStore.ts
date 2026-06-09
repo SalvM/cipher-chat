@@ -21,6 +21,7 @@ interface ChatConversationActions {
   setSelectedChatId: (chatId: ID | null) => void;
   isSelectedChatId: (chatId: ID) => boolean;
   fetchChats: () => Promise<void>;
+  fetchChatById: (chatId: ID) => Promise<void>;
   createChat: (userId: ID) => Promise<void>;
   setChatLastMessage: (message: Message) => void;
   setChatInputField: (chatId: ID, inputField: ChatInputField) => void;
@@ -144,6 +145,16 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
       console.error('[fetchChats]', e);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchChatById: async (chatId) => {
+    try {
+      const chat = await api.get<Chat>(`/chats/${chatId}`);
+      if (!chat?._id) return;
+      set({ chats: { ...get().chats, [chat._id]: chat } });
+    } catch (e) {
+      console.error('[fetchChatById]', e);
     }
   },
 

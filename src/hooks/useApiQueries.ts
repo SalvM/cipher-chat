@@ -131,6 +131,18 @@ export function useChatsQuery() {
   });
 }
 
+export function useChatQuery(chatId: ID | null) {
+  return useQuery({
+    queryKey: queryKeys.chats.detail(chatId ?? ''),
+    enabled: !!chatId,
+    queryFn: async () => {
+      const res = await api.get<Chat>(`/chats/${chatId}`);
+      if (!res?._id) throw new Error('Failed to fetch chat');
+      return res;
+    },
+  });
+}
+
 export function useCreateChat() {
   const queryClient = useQueryClient();
 

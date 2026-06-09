@@ -68,10 +68,20 @@ export const useSocket = () => {
             ...message,
             content: await decryptSafe(ck.key, message.content),
             ...(message.reply_to_content && {
-              reply_to_content: await decryptSafe(ck.key, message.reply_to_content),
+              reply_to_content: await decryptSafe(
+                ck.key,
+                message.reply_to_content
+              ),
             }),
           }
         : message;
+
+      const chatExists =
+        !!useConversationStore.getState().chats[message.chat_id ?? ''];
+      if (!chatExists && message.chat_id) {
+        await useConversationStore.getState().fetchChatById(message.chat_id);
+      }
+
       addMessageFromWs(dec);
       setChatLastMessage(dec);
     };
@@ -241,7 +251,10 @@ export const useSocket = () => {
       deleteTopicFromWS(data.cluster_id, data.topic_id);
     };
 
-    const onUserJoinedCluster = async (data: { cluster_id: ID; user: User }) => {
+    const onUserJoinedCluster = async (data: {
+      cluster_id: ID;
+      user: User;
+    }) => {
       memberJoinedFromWS(data.cluster_id, data.user);
       const cluster = useConversationStore.getState().clusters[data.cluster_id];
       if (cluster?.owner_id === user?._id) {
@@ -286,7 +299,8 @@ export const useSocket = () => {
         toast.error(`You were removed from "${clusterName}"`);
       } else {
         memberLeftFromWS(data.cluster_id, data.user_id);
-        const cluster = useConversationStore.getState().clusters[data.cluster_id];
+        const cluster =
+          useConversationStore.getState().clusters[data.cluster_id];
         if (cluster?.owner_id === user?._id) {
           const remaining = cluster.member_details?.map((m) => m._id) ?? [];
           try {
@@ -313,7 +327,11 @@ export const useSocket = () => {
       const ck = keyService.getCachedKey(data.context_type, data.context_id);
       if (!ck) return;
       try {
-        await keyService.depositKeyForUser(data.context_type, data.context_id, data.user_id);
+        await keyService.depositKeyForUser(
+          data.context_type,
+          data.context_id,
+          data.user_id
+        );
       } catch (e) {
         console.error('[useSocket] key deposit on request failed', e);
       }
