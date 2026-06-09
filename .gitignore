@@ -28,3 +28,6 @@ dist-ssr
 
 # AI
 CLAUDE.md
+.agents
+.claude
+skills-lock.json
