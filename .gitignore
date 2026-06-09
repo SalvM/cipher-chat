@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+
+# environment files
+.env
+.env.dev
+.env.local
+web/.env
+web/.env.local
+server/.env
+server/.env.dev
+
+# uploads (server-side file storage)
+server/uploads/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.local

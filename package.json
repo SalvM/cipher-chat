@@ -1,0 +1,15 @@
+{
+  "name": "cipher-chat",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web",
+    "server"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=web",
+    "dev:server": "npm run dev:win --workspace=server",
+    "build:web": "npm run build --workspace=web",
+    "lint:web": "npm run lint --workspace=web"
+  }
+}
