@@ -13,6 +13,7 @@ export interface AuthStoreState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
 }
 
 export interface AuthStoreActions {
@@ -36,6 +37,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
     token: null,
     isAuthenticated: false,
     isLoading: false,
+    isInitializing: true,
 
     initialize: () => {
       if (typeof window !== 'undefined') {
@@ -121,11 +123,11 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
               const pk = await CryptoService.decryptPrivateKey(bundle, password);
               useCryptoStore.getState().setPrivateKey(pk);
             } catch {
-              // Corrupted bundle or new device — fall through to keypair generation
+              console.error('[login] bundle decryption failed — key remains locked');
+              // AuthGuard will show UnlockKeyPrompt for manual retry
             }
-          }
-
-          if (!useCryptoStore.getState().isUnlocked) {
+          } else {
+            // No bundle: new user or new device — generate fresh keypair
             try {
               const kp = await CryptoService.generateIdentityKeypair();
               const pub = await CryptoService.exportPublicKey(kp.publicKey);
@@ -134,7 +136,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
               localStorage.setItem('privateKeyBundle', nb);
               useCryptoStore.getState().setPrivateKey(kp.privateKey);
             } catch (e) {
-              console.error('[login] new device keypair generation failed', e);
+              console.error('[login] keypair generation failed', e);
             }
           }
         }
@@ -148,7 +150,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
     fetchCurrentUser: async () => {
       const token = get().token;
       if (!token) {
-        set({ isLoading: false });
+        set({ isLoading: false, isInitializing: false });
         return;
       }
 
@@ -162,6 +164,8 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
       } catch (error) {
         localStorage.removeItem('token');
         set({ token: null, user: null, isLoading: false });
+      } finally {
+        set({ isInitializing: false });
       }
     },
 
@@ -192,7 +196,6 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
     logout: () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      localStorage.removeItem('privateKeyBundle');
       CryptoService.clearSessionKey();
       useCryptoStore.getState().clearPrivateKey();
       keyService.clearAll();
