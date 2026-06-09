@@ -16,6 +16,7 @@ interface ChatMessageFeedProps {
 }
 export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
   const {
+    isLoading,
     messages,
     fetchMessages,
     editMessage,
@@ -24,7 +25,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
     deleteMessage,
     addReaction,
     removeReaction,
-    removeMessageFromWs
+    removeMessageFromWs,
   } = useChatMessages(chatId);
   const { typingInCurrentChat, setChatInputField, setChatSettings } =
     useConversationStore();
@@ -59,7 +60,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
         chatId,
         content: message,
         disappearingMinutes: currentChat?.disappearing_minutes,
-        replyToId: chatInputField?.replyToMessage?._id
+        replyToId: chatInputField?.replyToMessage?._id,
       };
       if (file) {
         messageData.file = file;
@@ -75,7 +76,8 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
     resetChatInputField();
   };
 
-  const handleExpiredMessage = (messageId: ID) => removeMessageFromWs(chatId, messageId)
+  const handleExpiredMessage = (messageId: ID) =>
+    removeMessageFromWs(chatId, messageId);
 
   useEffect(() => {
     fetchMessages(chatId);
@@ -86,7 +88,7 @@ export const ChatMessageFeed = ({ chatId, userId }: ChatMessageFeedProps) => {
       <MessageFeed
         userId={userId}
         messages={messages}
-        isLoading={false}
+        isLoading={isLoading}
         onEdit={(messageId: ID, content: string) =>
           editMessage(chatId, messageId, content)
         }

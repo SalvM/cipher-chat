@@ -15,11 +15,17 @@ interface MessageFeedProps {
     onMessageExpired: (messageId: ID) => void;
     onReply?: (message: AnyMessage) => void;
 }
-export const MessageFeed = ({ userId, messages, onEdit, onDelete, addReaction, removeReaction, onReply, onMessageExpired }: MessageFeedProps) => {
+export const MessageFeed = ({ userId, messages, isLoading, onEdit, onDelete, addReaction, removeReaction, onReply, onMessageExpired }: MessageFeedProps) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    if (isLoading) return (
+        <div className="flex flex-1 items-center justify-center">
+            <div className="h-6 w-6 animate-spin rounded-full border-4 border-muted border-t-primary" />
+        </div>
+    );
 
     const handleReact = (messageId: ID, emoji: Emoji, action: 'add' | 'remove') => {
         if (action === 'add') {

@@ -62,7 +62,25 @@ export const useSocket = () => {
 
     // Private chats
     const onNewMessage = async (message: Message) => {
-      const ck = keyService.getCachedKey('chat', message.chat_id);
+      const chatExists =
+        !!useConversationStore.getState().chats[message.chat_id ?? ''];
+      if (!chatExists && message.chat_id) {
+        await useConversationStore.getState().fetchChatById(message.chat_id);
+      }
+
+      let ck = keyService.getCachedKey('chat', message.chat_id);
+      if (!ck && message.chat_id) {
+        try {
+          const chat = useConversationStore.getState().chats[message.chat_id];
+          const otherUserId = chat?.otherUser?._id;
+          const selfId = useAuthStore.getState().user?._id;
+          const memberIds = [selfId, otherUserId].filter(Boolean) as ID[];
+          ck = await keyService.getConversationKey('chat', message.chat_id, memberIds);
+        } catch {
+          // Key unavailable — store encrypted; fetchMessages re-decrypts on open
+        }
+      }
+
       const dec = ck
         ? {
             ...message,
@@ -75,12 +93,6 @@ export const useSocket = () => {
             }),
           }
         : message;
-
-      const chatExists =
-        !!useConversationStore.getState().chats[message.chat_id ?? ''];
-      if (!chatExists && message.chat_id) {
-        await useConversationStore.getState().fetchChatById(message.chat_id);
-      }
 
       addMessageFromWs(dec);
       setChatLastMessage(dec);
