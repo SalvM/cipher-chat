@@ -11,7 +11,7 @@ export const MESSAGE_REACTION = "message_reaction";
 export const USER_TYPING = "user_typing";
 export const CHAT_SETTINGS_UPDATED = "chat_settings_updated";
 
-// CLusters chats
+// Clusters
 export const CLUSTER_MESSAGE = "cluster_message";
 export const CLUSTER_MESSAGE_EDITED = "cluster_message_edited";
 export const CLUSTER_MESSAGE_DELETED = "cluster_message_deleted";
@@ -42,7 +42,7 @@ export default {
   USER_TYPING,
   CHAT_SETTINGS_UPDATED,
 
-  // CLusters chats
+  // Clusters
   CLUSTER_MESSAGE,
   CLUSTER_MESSAGE_EDITED,
   CLUSTER_MESSAGE_DELETED,
@@ -56,6 +56,7 @@ export default {
   USER_JOINED_CLUSTER,
   USER_LEFT_CLUSTER,
   MEMBER_REMOVED,
+  // E2E encryption
   CLUSTER_KEY_ROTATED,
   KEY_DEPOSIT_REQUESTED,
 };

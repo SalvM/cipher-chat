@@ -2,3 +2,5 @@
 node_modules/
 uploads/
 CLAUDE.md
+.claude
+skills-lock.json

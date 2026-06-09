@@ -1,62 +1,56 @@
 # Cipher Chat Server
 
-Real-time chat server API with end-to-end encryption support, file sharing, and cluster-based group chats. Built with Node.js, Express, Socket.io, and MongoDB.
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![ES Modules](https://img.shields.io/badge/ES-Modules-yellow)](https://nodejs.org/api/esm.html)
 
-## 🚀 Features
+Real-time chat server with end-to-end encryption, file sharing, and cluster-based group chats. Built with Node.js, Express, Socket.io, and MongoDB.
 
-- **User Authentication** - Register/Login with JWT tokens
-- **Recovery System** - 12-word mnemonic phrase for account recovery
-- **Real-time Messaging** - Instant message delivery via WebSockets
-- **Private Chats** - One-on-one encrypted conversations
-- **Cluster Chats** - Group chats with topic-based channels
-- **File Sharing** - Image and file uploads (up to 100MB)
-- **Message Features** - Edit, delete, reactions, reply to messages
-- **Read Receipts** - Track message read status
+## Features
 
-- **User Status** - Online/offline/away/DND status
-- **Block Users** - Block/unblock other users
-- **Disappearing Messages** - Auto-delete after timer expires
-- **End-to-End Encryption** - Per-member RSA envelope key distribution, AES-256-GCM message encryption
-- **Key Rotation** - Automatic conversation key rotation on member removal
-- **Server-side Encryption** - AES-256-GCM for stored files
+- **JWT Authentication** — Register/login with 30-day tokens, 12-word BIP-39 recovery phrase
+- **Private Chats** — One-on-one messaging
+- **Cluster Chats** — Group chats with topic-based channels
+- **End-to-End Encryption** — Per-member RSA-OAEP envelope key distribution, AES-256-GCM message encryption
+- **Key Rotation** — Conversation key rotates automatically on member removal
+- **Real-time** — Instant delivery, typing indicators, and presence via Socket.io
+- **File Sharing** — Image and file uploads (up to 100 MB)
+- **Message Features** — Edit, delete, reactions, replies, disappearing messages
+- **User Controls** — Status (online/away/DND/invisible), block/unblock
+- **Server-side Encryption** — AES-256-GCM for stored files
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Runtime**: Node.js (ES Modules)
+- **Runtime**: Node.js 18+ (ES Modules)
 - **Framework**: Express.js
 - **Real-time**: Socket.io
 - **Database**: MongoDB with Mongoose ODM
 - **Authentication**: JWT + bcrypt
 - **File Upload**: Multer
-- **Encryption**: Node.js crypto module
-- **Rate Limiting**: express-rate-limit, rate-limiter-flexible
-- **Validation**: Built-in with mongoose schemas
+- **Encryption**: Node.js `crypto` module
+- **Rate Limiting**: `express-rate-limit`, `rate-limiter-flexible`
 
-## 📋 Prerequisites
+## Prerequisites
 
 - Node.js 18+
 - MongoDB 6+
-- npm or yarn
 
-## ⚙️ Installation
+## Installation
 
 1. Clone the repository
+
 ```bash
-# SSH
-git clone git@github.com:SalvM/cipher-chat-server.git
-
-# HTTPS
 git clone https://github.com/SalvM/cipher-chat-server.git
-
 cd cipher-chat-server
 ```
 
 2. Install dependencies
+
 ```bash
 npm install
 ```
 
-3. Create environment files in root directory:
+3. Configure environment — copy `.example.env` and fill in values:
 
 **Development (`.env.dev`):**
 ```env
@@ -64,7 +58,7 @@ MONGO_URL=mongodb://localhost:27017/cipherchat
 DB_NAME=cipherchat
 JWT_SECRET=your-super-secret-jwt-key-change-this
 ENCRYPTION_KEY=your-encryption-key-16-bytes
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:8001
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 PORT=8001
 NODE_ENV=development
 ```
@@ -73,242 +67,247 @@ NODE_ENV=development
 ```env
 MONGO_URL=mongodb+srv://user:pass@cluster.mongodb.net/?ssl=true
 DB_NAME=cipherchat
-JWT_SECRET=your-super-secret-jwt-key-change-this
-ENCRYPTION_KEY=your-encryption-key-16-bytes
+JWT_SECRET=strong-random-secret
+ENCRYPTION_KEY=strong-16-byte-hex-key
 CORS_ORIGINS=https://yourdomain.com
 PORT=3000
 NODE_ENV=production
 ```
 
-See `.example.env` for template values.
-
-4. Start MongoDB locally or use MongoDB Atlas
+4. Start MongoDB (local or Atlas)
 
 5. Run the server
-```bash
-# Development (loads .env.dev, watches for changes)
-npm run dev
 
-# Production (loads .env)
+```bash
+# Development — loads .env.dev
+npm run dev:win    # Windows
+npm run dev:mac    # macOS / Linux
+
+# Production — loads .env
 npm start
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 cipher-chat-server/
-├── server.js              # Main application entry
-├── env.js                 # Environment config loader
-├── package.json           # Dependencies
-├── .env                   # Production environment variables
-├── .env.dev               # Development environment variables
-├── .example.env           # Environment template
-├── uploads/               # Uploaded files storage
-└── README.md              # Documentation
+├── server.js              # Express + Socket.io entry point
+├── env.js                 # Environment file loader
+├── websocket.js           # ConnectionManager (real-time broadcast)
+├── socketEvents.js        # Socket.io event name constants
+├── directories.js         # Upload directory setup
+├── startup.js             # Colored startup logging
+├── routes/                # REST API route handlers
+│   ├── authRoutes.js
+│   ├── usersRoutes.js
+│   ├── chatsRoutes.js
+│   ├── messagesRoutes.js
+│   ├── clustersRoutes.js
+│   ├── clusterMessagesRoutes.js
+│   ├── invitationsRoutes.js
+│   └── keysRoutes.js
+├── utils/
+│   ├── db.js              # Mongoose models, indexes, constants
+│   ├── schemas.js         # All Mongoose schema definitions
+│   ├── auth.js            # JWT helpers + authenticate middleware
+│   ├── cryption.js        # AES-256-GCM encrypt/decrypt, SHA-256
+│   ├── limiters.js        # Rate limiters
+│   └── upload.js          # Multer config
+├── middlewares/
+│   └── cors.js            # CORS options
+└── uploads/               # Served file storage (auto-created)
 ```
 
-## 🔌 API Endpoints
+## Architecture
+
+```
+Client (React / any)
+     │
+     ├─ REST ──▶ Express routes ──▶ MongoDB
+     │                │
+     └─ WebSocket ──▶ ConnectionManager ──▶ broadcast to participants
+```
+
+REST routes handle CRUD and then call `websocketManager` to push events to connected clients. WebSocket auth uses the same JWT as REST, passed in `socket.handshake.auth.token`. `ConnectionManager` holds `Map<userId, socket>` in memory — no Redis required for single-node deployments.
+
+## API Endpoints
+
+All routes are prefixed with `/api`. Protected routes require `Authorization: Bearer <token>`.
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| POST | `/api/auth/recover` | Recover account with mnemonic |
-| GET | `/api/auth/me` | Get current user |
-| PUT | `/api/auth/profile` | Update profile |
-| PUT | `/api/auth/status` | Update online status |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| POST | `/api/auth/register` | | Register new user, returns JWT + recovery phrase |
+| POST | `/api/auth/login` | | Login, returns JWT |
+| POST | `/api/auth/recover` | | Recover account with 12-word mnemonic |
+| GET | `/api/auth/me` | ✓ | Get current user |
+| PUT | `/api/auth/profile` | ✓ | Update display name, bio, avatar |
+| PUT | `/api/auth/status` | ✓ | Update presence status |
 
 ### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users/search?username=...` | Search users |
-| GET | `/api/users/blocked` | List blocked users |
-| GET | `/api/users/:user_id` | Get user by ID |
-| POST | `/api/users/block` | Block a user |
-| DELETE | `/api/users/block/:user_id` | Unblock a user |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| GET | `/api/users/search?username=...` | ✓ | Search users by username |
+| GET | `/api/users/blocked` | ✓ | List blocked users |
+| GET | `/api/users/:user_id` | ✓ | Get user by ID |
+| POST | `/api/users/block` | ✓ | Block a user |
+| DELETE | `/api/users/block/:user_id` | ✓ | Unblock a user |
 
 ### Chats
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/chats` | Get all user chats |
-| POST | `/api/chats` | Create private chat |
-| PUT | `/api/chats/:chat_id/settings` | Update chat settings |
-| GET | `/api/chats/:chat_id/messages` | Get chat messages |
-| GET | `/api/chats/:chat_id/unread` | Get unread count |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| GET | `/api/chats` | ✓ | Get all user chats |
+| POST | `/api/chats` | ✓ | Create or fetch existing 1-on-1 chat |
+| GET | `/api/chats/:chat_id` | ✓ | Get chat by ID |
+| PUT | `/api/chats/:chat_id/settings` | ✓ | Update chat settings |
+| GET | `/api/chats/:chat_id/messages` | ✓ | Get chat messages (paginated) |
+| GET | `/api/chats/:chat_id/unread` | ✓ | Get unread message count |
 
 ### Messages
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/messages` | Send message |
-| PUT | `/api/messages/:message_id` | Edit message |
-| DELETE | `/api/messages/:message_id` | Delete message |
-| POST | `/api/messages/:message_id/reactions` | Add reaction |
-| DELETE | `/api/messages/:message_id/reactions/:emoji` | Remove reaction |
-| POST | `/api/messages/read` | Mark messages as read |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| POST | `/api/messages` | ✓ | Send message |
+| POST | `/api/messages/with-attachment` | ✓ | Send message with file attachment |
+| PUT | `/api/messages/:message_id` | ✓ | Edit message |
+| DELETE | `/api/messages/:message_id` | ✓ | Delete message |
+| POST | `/api/messages/:message_id/reactions` | ✓ | Add reaction |
+| DELETE | `/api/messages/:message_id/reactions/:emoji` | ✓ | Remove reaction |
+| POST | `/api/messages/read` | ✓ | Mark messages as read |
 
 ### Files
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/upload` | Upload file (returns attachment object) |
-| POST | `/api/messages/with-attachment` | Send message with file |
-| GET | `/api/files/:file_id` | Download file |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| GET | `/api/files/:file_id` | ✓ | Download file |
 
 ### Clusters (Groups)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/clusters` | Get user clusters |
-| POST | `/api/clusters` | Create cluster |
-| GET | `/api/clusters/:cluster_id` | Get cluster details |
-| PUT | `/api/clusters/:cluster_id` | Update cluster settings (owner) |
-| DELETE | `/api/clusters/:cluster_id` | Delete cluster (owner) |
-| POST | `/api/clusters/:cluster_id/topics` | Create topic |
-| PUT | `/api/clusters/:cluster_id/topics/:topic_id` | Update topic settings (owner) |
-| DELETE | `/api/clusters/:cluster_id/topics/:topic_id` | Delete topic + messages (owner) |
-| GET | `/api/clusters/:cluster_id/topics/:topic_id/messages` | Get topic messages |
-| POST | `/api/clusters/:cluster_id/topics/:topic_id/messages` | Send topic message |
-| POST | `/api/clusters/:cluster_id/join` | Join cluster via invitation |
-| DELETE | `/api/clusters/:cluster_id/members/:member_id` | Remove member (owner) |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| GET | `/api/clusters` | ✓ | Get user's clusters |
+| POST | `/api/clusters` | ✓ | Create cluster |
+| GET | `/api/clusters/:cluster_id` | ✓ | Get cluster details |
+| PUT | `/api/clusters/:cluster_id` | ✓ | Update cluster (owner only) |
+| DELETE | `/api/clusters/:cluster_id` | ✓ | Delete cluster (owner only) |
+| POST | `/api/clusters/:cluster_id/topics` | ✓ | Create topic |
+| PUT | `/api/clusters/:cluster_id/topics/:topic_id` | ✓ | Update topic (owner only) |
+| DELETE | `/api/clusters/:cluster_id/topics/:topic_id` | ✓ | Delete topic + messages (owner only) |
+| GET | `/api/clusters/:cluster_id/topics/:topic_id/messages` | ✓ | Get topic messages |
+| POST | `/api/clusters/:cluster_id/join` | ✓ | Join cluster via invitation |
+| DELETE | `/api/clusters/:cluster_id/members/:member_id` | ✓ | Remove member (owner only) |
+
+### Cluster Messages
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| POST | `/api/clusterMessages` | ✓ | Send cluster message |
+| PUT | `/api/clusterMessages/:message_id` | ✓ | Edit cluster message |
+| DELETE | `/api/clusterMessages/:message_id` | ✓ | Delete cluster message |
+| POST | `/api/clusterMessages/:message_id/reactions` | ✓ | Add reaction |
+| DELETE | `/api/clusterMessages/:message_id/reactions/:emoji` | ✓ | Remove reaction |
+
+### Invitations
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| POST | `/api/invitations` | ✓ | Create invitation |
+| GET | `/api/invitations/:invitation_id` | ✓ | Get invitation |
+| DELETE | `/api/invitations/:invitation_id` | ✓ | Delete invitation |
 
 ### Keys (E2E Encryption)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| PUT | `/api/keys/identity` | Store caller's RSA public key |
-| GET | `/api/keys/identity/:user_id` | Fetch a user's RSA public key |
-| POST | `/api/keys/conversation` | Upload encrypted key envelopes for conversation members |
-| GET | `/api/keys/conversation` | Fetch caller's encrypted conversation key envelope |
-| GET | `/api/keys/members/:cluster_id` | Fetch all cluster members with their public keys |
-| POST | `/api/keys/rotate` | Rotate cluster key after member removal |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| PUT | `/api/keys/identity` | ✓ | Store caller's RSA public key |
+| GET | `/api/keys/identity/:user_id` | ✓ | Fetch a user's RSA public key |
+| POST | `/api/keys/conversation` | ✓ | Upload encrypted key envelopes for members |
+| GET | `/api/keys/conversation` | ✓ | Fetch caller's encrypted key envelope |
+| GET | `/api/keys/members/:cluster_id` | ✓ | Fetch all cluster members with their public keys |
+| POST | `/api/keys/rotate` | ✓ | Rotate cluster key after member removal |
 
 ### Health
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/` | API info |
-| GET | `/api/health` | Health check |
+| Method | Endpoint | Auth | Description |
+|--------|----------|:----:|-------------|
+| GET | `/api/` | | API info |
+| GET | `/api/health` | | Health check |
 
-## 🔌 WebSocket Events
+## WebSocket Events
 
-### Client -> Server
+Connect with JWT in the handshake:
+
 ```javascript
-// Typing indicator
-socket.emit('message', {
-  type: 'typing',
-  chat_id: 'chat-123',
-  is_typing: true
-});
-
-// Status update
-socket.emit('message', {
-  type: 'status',
-  status: 'online' // online, away, dnd, invisible
+const socket = io('http://localhost:8001', {
+  auth: { token: 'your-jwt-token' }
 });
 ```
 
-### Server -> Client
+### Client → Server
+
 ```javascript
-// New message
-{
-  type: 'new_message',
-  message: { ... }
-}
+// Typing indicator (private chat)
+socket.emit('user_typing', { chatId, isTyping: true });
 
-// Message edited
-{
-  type: 'message_edited',
-  message_id: 'msg-123',
-  content: 'updated content',
-  edited_at: '2024-01-01T00:00:00Z'
-}
+// Typing indicator (cluster topic)
+socket.emit('topic_typing', { clusterId, topicId, isTyping: true });
 
-// Message deleted
-{
-  type: 'message_deleted',
-  message_id: 'msg-123',
-  chat_id: 'chat-123'
-}
+// Status update (persisted to DB)
+socket.emit('message', { type: 'status', status: 'online' }); // online | away | dnd | invisible
 
-// Message reaction
-{
-  type: 'message_reaction',
-  message_id: 'msg-123',
-  emoji: '👍',
-  user_id: 'user-123',
-  action: 'add' // or 'remove'
-}
-
-// Status update
-{
-  type: 'status_update',
-  user_id: 'user-123',
-  status: 'online'
-}
-
-// Typing indicator
-{
-  type: 'typing',
-  user_id: 'user-123',
-  chat_id: 'chat-123',
-  is_typing: true
-}
-
-// Message read - DEPRECATED
-{
-  type: 'message_read',
-  message_id: 'msg-123',
-  chat_id: 'chat-123',
-  read_by: 'user-123'
-}
-
-// Chat settings updated
-{
-  type: 'chat_settings_updated',
-  chat_id: 'chat-123',
-  settings: { disappearing_timer: 30 },
-  updated_by: 'user-123'
-}
-
-// Cluster/topic settings updated
-{ type: 'cluster_settings_updated', cluster_id: 'cluster-123', ... }
-{ type: 'topic_settings_updated', cluster_id: 'cluster-123', topic_id: 'topic-123', ... }
-
-// Cluster/topic deleted
-{ type: 'cluster_deleted', cluster_id: 'cluster-123' }
-{ type: 'topic_deleted', cluster_id: 'cluster-123', topic_id: 'topic-123' }
-
-// Member events
-{ type: 'user_joined_cluster', cluster_id: 'cluster-123', user_id: 'user-123' }
-{ type: 'user_left_cluster', cluster_id: 'cluster-123', user_id: 'user-123' }
-{ type: 'member_removed', cluster_id: 'cluster-123', user_id: 'user-123' }
-
-// E2E key events
-{ type: 'cluster_key_rotated', cluster_id: 'cluster-123', new_key_version: 3 }
-{ type: 'key_deposit_requested', context_type: 'cluster', context_id: 'cluster-123', user_id: 'user-123' }
+// Relay key deposit request to all members
+socket.emit('key_deposit_requested', { context_type, context_id, user_id });
 ```
 
-## 🔐 Security Features
+### Server → Client
 
-- **JWT Authentication** - Tokens expire after 30 days
-- **Password Hashing** - bcrypt with salt rounds
-- **Rate Limiting** - 100 requests per IP per minute
-- **File Validation** - MIME type checking, size limits
-- **Server-side Encryption** - AES-256-GCM for stored files
-- **Recovery Phrases** - 12-word mnemonic, bcrypted
-- **CORS Protection** - Configurable origins
-- **Input Validation** - Mongoose schema validation
-- **Block System** - Prevent communication with blocked users
+```javascript
+// Presence
+{ type: 'status_update', user_id, status }
 
-## 📦 Data Models
+// Private chat
+{ type: 'new_message', message: { ... } }
+{ type: 'message_edited', message_id, content, edited_at }
+{ type: 'message_deleted', message_id, chat_id }
+{ type: 'message_reaction', message_id, emoji, user_id, action } // action: 'add' | 'remove'
+{ type: 'user_typing', chat_id, is_typing, user_id }
+{ type: 'chat_settings_updated', chat_id, settings, updated_by }
+
+// Clusters
+{ type: 'cluster_message', message: { ... } }
+{ type: 'cluster_message_edited', message_id, content, edited_at }
+{ type: 'cluster_message_deleted', message_id, cluster_id }
+{ type: 'cluster_message_reaction', message_id, emoji, user_id, action }
+{ type: 'topic_typing', cluster_id, topic_id, user_id, is_typing }
+{ type: 'cluster_settings_updated', cluster_id, ... }
+{ type: 'topic_settings_updated', cluster_id, topic_id, ... }
+{ type: 'cluster_deleted', cluster_id }
+{ type: 'topic_deleted', cluster_id, topic_id }
+{ type: 'user_joined_cluster', cluster_id, user_id }
+{ type: 'user_left_cluster', cluster_id, user_id }
+{ type: 'member_removed', cluster_id, user_id }
+
+// E2E encryption
+{ type: 'cluster_key_rotated', cluster_id, new_key_version }
+{ type: 'key_deposit_requested', context_type, context_id, user_id }
+```
+
+## Security
+
+- **JWT** — 30-day expiry, verified on every protected request
+- **Passwords** — bcrypt hashed
+- **Recovery** — BIP-39 12-word mnemonic, SHA-256 hashed server-side
+- **Rate limiting** — 100 req/min per IP (global); 5 auth attempts per 15 min in production
+- **File validation** — MIME type whitelist, 100 MB cap
+- **Server-side encryption** — AES-256-GCM for stored files
+- **CORS** — Configurable origin allowlist
+- **Block system** — Blocked users cannot send messages or see online status
+
+## Data Models
 
 ### User
 ```javascript
 {
-  id: String (UUID),
-  username: String,
+  _id: String (UUID),
+  username: String,          // unique, indexed
   display_name: String,
   avatar: String,
   bio: String,
-  public_key: String,        // RSA public key (PEM/SPKI)
-  status: String,
+  public_key: String,        // RSA public key (SPKI, PEM)
+  status: String,            // online | away | dnd | invisible | offline
   blocked_users: [String],
   created_at: Date
 }
@@ -317,10 +316,9 @@ socket.emit('message', {
 ### Chat
 ```javascript
 {
-  id: String (UUID),
-  type: 'private' | 'group',
-  participants: [String],
-  disappearing_timer: Number, // minutes
+  _id: String (UUID),
+  participants: [String],    // indexed
+  disappearing_timer: Number, // minutes; 0 = disabled
   created_at: Date
 }
 ```
@@ -328,10 +326,10 @@ socket.emit('message', {
 ### Message
 ```javascript
 {
-  id: String (UUID),
-  content: String,
+  _id: String (UUID),
+  content: String,           // encrypted client-side, max 5000 chars
   sender_id: String,
-  chat_id: String,
+  chat_id: String,           // indexed with created_at
   reply_to: String,
   attachments: [{
     file_id: String,
@@ -340,26 +338,25 @@ socket.emit('message', {
     size: Number,
     is_image: Boolean
   }],
-  reactions: Map<String, [String]>,
-  read_by: [String],
-  expires_at: Date,
-  created_at: Date,
-  edited: Boolean
+  reactions: Map<String, [String]>, // emoji → [user_id]
+  expires_at: Date,          // MongoDB TTL index; null = never expires
+  edited: Boolean,
+  created_at: Date
 }
 ```
 
 ### Cluster
 ```javascript
 {
-  id: String (UUID),
+  _id: String (UUID),
   name: String,
   description: String,
   owner_id: String,
-  members: [String],
+  members: [String],         // indexed
   topics: [{
-    id: String,
+    _id: String,
     name: String,
-    disappearing_minutes: Number, // optional: 1, 5, 30, 60, 1440, 10080
+    disappearing_minutes: Number, // 1 | 5 | 30 | 60 | 1440 | 10080
     created_at: Date
   }],
   created_at: Date
@@ -370,79 +367,57 @@ socket.emit('message', {
 ```javascript
 {
   context_type: 'chat' | 'cluster',
-  context_id: String,          // chat_id or cluster_id
-  user_id: String,             // envelope recipient
-  encrypted_key: String,       // RSA-OAEP encrypted AES key (base64)
-  key_version: Number,         // increments on rotation
+  context_id: String,        // chat_id or cluster_id
+  user_id: String,           // envelope recipient
+  encrypted_key: String,     // AES key encrypted with recipient's RSA public key (base64)
+  key_version: Number,       // increments on rotation
   created_at: Date
 }
 ```
 
-## 🚦 Rate Limits
+## Rate Limits
 
-- **General API**: 100 requests per minute per IP
-- **Auth endpoints**: 5 attempts per 15 minutes (55 in development)
-- **File uploads**: Max 100MB per file
-- **Image uploads**: Max 25MB per file
+| Scope | Limit |
+|-------|-------|
+| General API | 100 req / min per IP |
+| Auth endpoints (production) | 5 attempts / 15 min |
+| File uploads | 100 MB per file |
+| Image uploads | 25 MB per file |
 
-## 🔧 Environment Variables
+## Environment Variables
 
-Environment files are loaded based on `NODE_ENV`:
-- **`.env.dev`** — loaded when `NODE_ENV=development` (default)
-- **`.env`** — loaded when `NODE_ENV=production`
+Environment files are auto-loaded based on `NODE_ENV`:
+- **`.env.dev`** — `NODE_ENV=development` (default)
+- **`.env`** — `NODE_ENV=production`
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| MONGO_URL | MongoDB connection string | Required |
-| DB_NAME | Database name | Required |
-| JWT_SECRET | Secret for JWT signing | Auto-generated if missing |
-| ENCRYPTION_KEY | 16-byte hex key for AES-256-GCM | Auto-generated if missing |
-| CORS_ORIGINS | Comma-separated allowed origins | * |
-| PORT | Server listen port | 3000 |
-| NODE_ENV | Environment mode (development/production) | development |
+| `MONGO_URL` | MongoDB connection string | required |
+| `DB_NAME` | Database name | required |
+| `JWT_SECRET` | JWT signing secret | auto-generated |
+| `ENCRYPTION_KEY` | 16-byte hex key for file encryption | auto-generated |
+| `CORS_ORIGINS` | Comma-separated allowed origins | `*` |
+| `PORT` | Listen port | `3000` |
+| `NODE_ENV` | `development` or `production` | `development` |
 
-## 🧪 Testing
+> **Warning:** Auto-generated `JWT_SECRET` and `ENCRYPTION_KEY` regenerate on every restart. Always set them explicitly in production.
 
-```bash
-# Run tests (when implemented)
-npm test
-```
-
-## 📈 Performance Optimizations
-
-- MongoDB indexes on frequently queried fields
-- Message pagination (limit parameter)
-- WebSocket connection pooling
-- File streaming for downloads
-- Background cleanup jobs for expired messages
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push to the branch (`git push origin feature/my-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
-## 👥 Authors
+## Author
 
-- **Salvatore** - [@SalvM](https://github.com/SalvM)
-- **Email**: salvatore.manna@protonmail.com
-- **Project Link**: [https://github.com/SalvM/cipher-chat-server](https://github.com/SalvM/cipher-chat-server)
-
-## ☕ Support
-
-If you found this project helpful and want to show appreciation, consider buying me a beer (or coffee):
-
-- **Bitcoin**: `your-btc-address`
-- **Ethereum**: `your-eth-address`
-- **PayPal**: [paypal.me/yourusername](https://paypal.me/yourusername)
-- **Buy Me a Coffee**: [buymeacoffee.com/yourusername](https://buymeacoffee.com/yourusername)
+**Salvatore** — [@SalvM](https://github.com/SalvM) · salvatore.manna@protonmail.com
 
 ---
 
-*Built with ❤️ and JavaScript*
+*Built with JavaScript*

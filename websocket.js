@@ -1,10 +1,15 @@
 import { Chat, Cluster } from "./utils/db.js";
 import SocketEvents from "./socketEvents.js";
 
+/**
+ * Manages active WebSocket connections and real-time event broadcasting.
+ * Holds all state in-memory — connections are lost on process restart.
+ * For multi-node deployments, replace with a Redis-backed adapter.
+ */
 class ConnectionManager {
   constructor() {
-    this.activeConnections = new Map();
-    this.userStatus = new Map();
+    this.activeConnections = new Map(); // userId → socket
+    this.userStatus = new Map();        // userId → status string
     this.typingUsers = new Map();
   }
 
