@@ -36,6 +36,7 @@ const authenticate = async (req, res, next) => {
       .select("_id username display_name avatar status blocked_users")
       .lean();
     if (!user) {
+      // Generic 401 rather than 404 to avoid leaking whether the user_id exists
       return res.status(401).json({ error: "User not found" });
     }
 

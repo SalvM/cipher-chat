@@ -146,6 +146,7 @@ io.on("connection", (socket) => {
       });
     } else if (data.type === "status") {
       await User.updateOne({ _id: userId }, { $set: { status: data.status } });
+      // invisible is persisted to DB but never broadcast — other users see the caller as offline
       if (data.status !== "invisible") {
         await websocketManager.broadcastStatus(userId, data.status);
       }
@@ -171,6 +172,8 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Relay KEY_DEPOSIT_REQUESTED to all conversation members so the key owner
+  // knows a new member joined and needs to deposit an encrypted envelope for them.
   socket.on(SocketEvents.KEY_DEPOSIT_REQUESTED, async (data) => {
     const { context_type, context_id, user_id } = data ?? {};
     if (!context_type || !context_id || !user_id) return;

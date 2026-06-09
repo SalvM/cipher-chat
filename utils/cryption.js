@@ -8,6 +8,14 @@ const hashRecoveryPhrase = (phrase) => {
   return hash256(phrase.toLowerCase())
 };
 
+/**
+ * Encrypts plaintext with AES-256-GCM.
+ * Output format (base64): iv(12 bytes) + authTag(16 bytes) + ciphertext
+ * IV is random per call — reusing an IV with the same key breaks GCM security.
+ * @param {string} content - Plaintext to encrypt
+ * @param {string} _key - 32-byte key as hex string
+ * @returns {string} Base64-encoded encrypted payload
+ */
 const encryptMessage = (content, _key) => {
   const key = Buffer.from(_key, 'hex');
   const iv = crypto.randomBytes(12);
@@ -17,6 +25,13 @@ const encryptMessage = (content, _key) => {
   return Buffer.concat([iv, authTag, encrypted]).toString('base64');
 };
 
+/**
+ * Decrypts an AES-256-GCM payload produced by encryptMessage.
+ * Returns null on auth tag mismatch or any decryption error.
+ * @param {string} encryptedContent - Base64-encoded payload
+ * @param {string} _key - 32-byte key as hex string
+ * @returns {string|null} Decrypted plaintext or null on failure
+ */
 const decryptMessage = (encryptedContent, _key) => {
   try {
     const key = Buffer.from(_key, 'hex');

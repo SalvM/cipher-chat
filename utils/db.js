@@ -37,6 +37,7 @@ await Promise.all([
   ClusterMessage.collection.createIndex({ cluster_id: 1, created_at: -1 }),
   ClusterMessage.collection.createIndex({ topic_id: 1, created_at: -1 }), // query for topic
   Invitation.collection.createIndex({ cluster_id: 1 }),
+  // One envelope per user per conversation — enforced at DB level to prevent duplicates on concurrent deposits
   ConversationKey.collection.createIndex(
     { context_type: 1, context_id: 1, user_id: 1 },
     { unique: true },
