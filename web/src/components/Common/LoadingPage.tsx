@@ -1,7 +1,11 @@
+import { Spinner } from '@/components/ui/spinner';
+import LogoSrc from '@/assets/icons/cipher-logo-primary.svg';
+
 export function LoadingPage() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
+    <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <img src={LogoSrc} alt="Cipher Chat" className="h-10 w-10 opacity-60" />
+      <Spinner size="md" />
     </div>
   );
 }

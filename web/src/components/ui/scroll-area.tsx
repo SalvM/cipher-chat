@@ -24,18 +24,18 @@ export function ScrollArea({
       {(orientation === 'vertical' || orientation === 'both') && (
         <ScrollAreaPrimitive.Scrollbar
           orientation="vertical"
-          className="flex w-1.5 touch-none select-none p-px transition-colors hover:w-2"
+          className="flex w-1.5 touch-none select-none p-px transition-all hover:w-2"
         >
-          <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-border-strong" />
+          <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-primary/30 hover:bg-primary/50 transition-colors" />
         </ScrollAreaPrimitive.Scrollbar>
       )}
 
       {(orientation === 'horizontal' || orientation === 'both') && (
         <ScrollAreaPrimitive.Scrollbar
           orientation="horizontal"
-          className="flex h-1.5 touch-none select-none flex-col p-px transition-colors hover:h-2"
+          className="flex h-1.5 touch-none select-none flex-col p-px transition-all hover:h-2"
         >
-          <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-border-strong" />
+          <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-primary/30 hover:bg-primary/50 transition-colors" />
         </ScrollAreaPrimitive.Scrollbar>
       )}
 

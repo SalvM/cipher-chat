@@ -4,29 +4,29 @@ import {
   DropdownLabel,
   DropdownMenu,
 } from '@/components/ui/dropdown-menu';
-import { ClockIcon } from 'lucide-react';
-import { Button } from '../ui/button';
-import { cn } from '@/utils';
+import { ExpireChip } from '@/components/ui/expire-chip';
 
 interface TimeOptions {
   value: number;
   label: string;
   shortLabel: string;
 }
+
 interface TimeSelectorProps {
   initialValue?: number | null;
   onChange: (minutes: number) => void;
 }
 
 const timeOptions: TimeOptions[] = [
-  { value: 1, label: '1 minute', shortLabel: '1m' },
-  { value: 5, label: '5 minutes', shortLabel: '5m' },
-  { value: 30, label: '30 minutes', shortLabel: '30m' },
-  { value: 60, label: '1 hour', shortLabel: '1h' },
-  { value: 1440, label: '1 day', shortLabel: '1d' },
-  { value: 10080, label: '7 days', shortLabel: '7d' },
-  { value: 0, label: 'No expiration', shortLabel: '' },
+  { value: 1,     label: '1 minute',     shortLabel: '1m'  },
+  { value: 5,     label: '5 minutes',    shortLabel: '5m'  },
+  { value: 30,    label: '30 minutes',   shortLabel: '30m' },
+  { value: 60,    label: '1 hour',       shortLabel: '1h'  },
+  { value: 1440,  label: '1 day',        shortLabel: '1d'  },
+  { value: 10080, label: '7 days',       shortLabel: '7d'  },
+  { value: 0,     label: 'No expiration', shortLabel: ''   },
 ];
+
 const defaultTimeOption = timeOptions[6];
 const findTimeOptionByValue = (value: number) =>
   timeOptions.find((opt) => opt.value === value) ?? defaultTimeOption;
@@ -42,33 +42,28 @@ const TimeSelector = ({ initialValue, onChange }: TimeSelectorProps) => {
   );
 
   const handleOptionChange = (index: number) => {
-    const selectedOption = timeOptions[index];
-    setSelectedOption(selectedOption);
-    onChange(selectedOption?.value);
+    const opt = timeOptions[index];
+    setSelectedOption(opt);
+    onChange(opt?.value);
   };
 
   useEffect(() => {
     if (initialValue === undefined || initialValue === null) return;
-    const newDefaultExpireValue = findTimeOptionByValue(initialValue);
-    setSelectedOption(newDefaultExpireValue);
+    setSelectedOption(findTimeOptionByValue(initialValue));
   }, [initialValue]);
 
   return (
     <DropdownMenu
       trigger={
-        <Button
-          intent="link"
-          size={expirationSelected ? 'md' : 'icon'}
-          className={cn([
-            'justify-center items-center text-text-secondary hover:text-text-primary hover:bg-ghost-hover',
-            expirationSelected && 'text-warning hover:text-warning',
-          ])}
+        <button
+          type="button"
+          className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-lg"
+          aria-label="Set message expiration timer"
         >
-          <ClockIcon className={expirationSelected ? 'h-7 w-7' : 'h-4 w-4'} />
-          {expirationSelected && (
-            <span className="text-xs">{selectedOption?.shortLabel}</span>
-          )}
-        </Button>
+          <ExpireChip
+            label={expirationSelected ? selectedOption.shortLabel : undefined}
+          />
+        </button>
       }
       align="start"
     >

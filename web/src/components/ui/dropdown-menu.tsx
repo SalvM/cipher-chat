@@ -3,14 +3,20 @@ import { CheckIcon, ChevronRightIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { cn } from '@/utils';
 
-// ── Subcomponents ──────────────────────────────────────────────
-
 const itemBase = [
-  'relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5',
+  'relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-1.5',
   'text-sm text-text-secondary outline-none',
+  'transition-colors duration-100',
   'hover:bg-ghost-hover hover:text-ghost-fg-hover',
   'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
 ];
+
+const contentBase = cn(
+  'z-50 min-w-44 rounded-xl border border-border-strong',
+  'bg-overlay/95 backdrop-blur-xl p-1.5 shadow-xl',
+  'animate-in fade-in-0 zoom-in-95',
+  'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+);
 
 export function DropdownMenu({
   children,
@@ -29,11 +35,7 @@ export function DropdownMenu({
         <DropdownPrimitive.Content
           align={align}
           sideOffset={6}
-          className={cn(
-            'z-50 min-w-45 rounded-lg border border-border bg-overlay p-1 shadow-xl',
-            'animate-in fade-in-0 zoom-in-95',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
-          )}
+          className={contentBase}
         >
           {children}
         </DropdownPrimitive.Content>
@@ -50,7 +52,7 @@ export function DropdownItem({
 }: {
   children: ReactNode;
   onSelect?: () => void;
-  intent?: 'default' | 'danger';
+  intent?: 'default' | 'danger' | 'accent';
   disabled?: boolean;
 }) {
   return (
@@ -59,8 +61,8 @@ export function DropdownItem({
       disabled={disabled}
       className={cn(
         itemBase,
-        intent === 'danger' &&
-          'text-danger hover:bg-danger-subtle hover:text-danger'
+        intent === 'danger' && 'text-danger hover:bg-danger-subtle hover:text-danger',
+        intent === 'accent' && 'text-accent hover:bg-accent-subtle hover:text-accent'
       )}
     >
       {children}
@@ -84,7 +86,7 @@ export function DropdownCheckItem({
       className={cn(itemBase, 'pl-7')}
     >
       <DropdownPrimitive.ItemIndicator className="absolute left-2">
-        <CheckIcon size={14} />
+        <CheckIcon size={14} className="text-primary" />
       </DropdownPrimitive.ItemIndicator>
       {children}
     </DropdownPrimitive.CheckboxItem>
@@ -102,13 +104,13 @@ export function DropdownSub({
     <DropdownPrimitive.Sub>
       <DropdownPrimitive.SubTrigger className={cn(itemBase, 'justify-between')}>
         {label}
-        <ChevronRightIcon size={14} />
+        <ChevronRightIcon size={14} className="text-text-muted" />
       </DropdownPrimitive.SubTrigger>
 
       <DropdownPrimitive.Portal>
         <DropdownPrimitive.SubContent
           sideOffset={8}
-          className="z-50 min-w-40 rounded-lg border border-border bg-overlay p-1 shadow-xl"
+          className={contentBase}
         >
           {children}
         </DropdownPrimitive.SubContent>
@@ -123,7 +125,7 @@ export function DropdownSeparator() {
 
 export function DropdownLabel({ children }: { children: ReactNode }) {
   return (
-    <DropdownPrimitive.Label className="px-2 py-1 text-xs font-medium text-text-muted">
+    <DropdownPrimitive.Label className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
       {children}
     </DropdownPrimitive.Label>
   );
