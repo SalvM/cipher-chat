@@ -200,7 +200,7 @@ const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
                     sideOffset={4}
                   >
                     <DropdownPrimitive.Item
-                      className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text-secondary outline-none hover:bg-ghost-hover hover:text-ghost-fg-hover data-disabled:pointer-events-none data-[disabled]:opacity-40"
+                      className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-text-secondary outline-none hover:bg-ghost-hover hover:text-ghost-fg-hover data-disabled:pointer-events-none data-disabled:opacity-40"
                       onSelect={() => {
                         setEditingTopic(topic);
                         setContextMenuTopicId(null);
@@ -210,7 +210,7 @@ const ClusterView = ({ clusterId, userId }: ClusterViewProps) => {
                       Edit topic
                     </DropdownPrimitive.Item>
                     <DropdownPrimitive.Item
-                      className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-danger outline-none hover:bg-danger-subtle hover:text-danger data-[disabled]:pointer-events-none data-[disabled]:opacity-40"
+                      className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-danger outline-none hover:bg-danger-subtle hover:text-danger data-disabled:pointer-events-none data-disabled:opacity-40"
                       onSelect={() => {
                         handleDeleteTopic(topic._id);
                         setContextMenuTopicId(null);

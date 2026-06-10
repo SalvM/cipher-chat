@@ -1,6 +1,19 @@
 import type { ID, Timestamp } from '@/types/utilityTypes';
 
-export type Emoji = '👍' | '❤️' | '😂' | '😮' | '😢' | '🔥' | '👏' | '🎉';
+export type Emoji =
+  | '👍'
+  | '❤️'
+  | '😂'
+  | '😮'
+  | '😢'
+  | '🔥'
+  | '👏'
+  | '🎉'
+  | '💀'
+  | '✨'
+  | '🤝'
+  | '👋'
+  | '😤';
 
 export interface MessageAttachment {
   _id: ID;

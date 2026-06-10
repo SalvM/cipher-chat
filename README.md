@@ -34,6 +34,18 @@ Cipher Chat is a privacy-oriented chat and collaboration space — think Discord
 
 ---
 
+## Screenshots
+
+| Login | Chat |
+|-------|------|
+| ![Login page](screenshots/login-page.png) | ![Chat conversation](screenshots/chat-conversation.png) |
+
+| Cluster | Design System |
+|---------|---------------|
+| ![Cluster view](screenshots/cluster-illuminati.png) | ![Showcase page](screenshots/showcase-full.png) |
+
+---
+
 ## Architecture
 
 ```

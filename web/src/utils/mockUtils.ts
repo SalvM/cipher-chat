@@ -4,15 +4,20 @@ import type { User } from '@/types/userTypes';
 
 // ── Avatar sources ────────────────────────────────────────────────
 const DIO_SRC =
-  'https://avatars.fastly.steamstatic.com/020e751b71cecafb24d2716b46c5b212930a75ab_full.jpg';
+  'https://static.jojowiki.com/images/d/d5/latest/20191015214612/DioAvAnim3.png';
 const GYRO_SRC =
-  'https://steamuserimages-a.akamaihd.net/ugc/784111175456702019/FA82EEB8C8BEF311A2E8370602C39200ACB2C1F2/?imw=512&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false';
+  'https://static.jojowiki.com/images/0/0e/latest/20200102214116/GyroAv.png';
 const JOSEPH_SRC = 'https://static.jojowiki.com/images/9/9f/JosephAvAnim3.png';
-const JOTARO_SRC = 'https://api.dicebear.com/9.x/pixel-art/svg?seed=jotaro&backgroundColor=0d1120';
-const KIRA_SRC   = 'https://api.dicebear.com/9.x/pixel-art/svg?seed=kira&backgroundColor=0d1120';
-const GIORNO_SRC = 'https://api.dicebear.com/9.x/pixel-art/svg?seed=giorno&backgroundColor=0d1120';
-const BRUNO_SRC  = 'https://api.dicebear.com/9.x/pixel-art/svg?seed=bruno&backgroundColor=0d1120';
-const OKUYASU_SRC = 'https://api.dicebear.com/9.x/pixel-art/svg?seed=okuyasu&backgroundColor=0d1120';
+const JOTARO_SRC =
+  'https://static.jojowiki.com/images/3/31/latest/20191015214758/5JotaroDR.png';
+const KIRA_SRC =
+  'https://static.jojowiki.com/images/8/84/latest/20251012191436/OraDoraKiraAv.png';
+const GIORNO_SRC =
+  'https://static.jojowiki.com/images/d/d7/latest/20191015215128/GiornoAvAnim.png';
+const BRUNO_SRC =
+  'https://static.jojowiki.com/images/d/d4/latest/20191015215945/BrunoAvAnim.png';
+const OKUYASU_SRC =
+  'https://static.jojowiki.com/images/1/1e/latest/20191015214139/OkuyasuAvAnim.png';
 
 // ── Mock attachment ───────────────────────────────────────────────
 const epsteinAttachment: MessageAttachment = {
@@ -117,7 +122,8 @@ const jojoMessages: Message[] = [
     _id: '1',
     chat_id: '101',
     sender_id: '1',
-    content: 'WRYYYYYYY! I have established the TLS handshake! Your plaintext is no match for my STAND!',
+    content:
+      'WRYYYYYYY! I have established the TLS handshake! Your plaintext is no match for my STAND!',
     edited: false,
     read_by: ['301', '401'],
     reactions: { '😂': ['2', '9'] },
@@ -132,7 +138,8 @@ const jojoMessages: Message[] = [
     _id: '2',
     chat_id: '101',
     sender_id: '2',
-    content: 'LESSON 1 of CIPHER SECURITY: spinning is justice. LESSON 2: always rotate your encryption keys.',
+    content:
+      'LESSON 1 of CIPHER SECURITY: spinning is justice. LESSON 2: always rotate your encryption keys.',
     edited: false,
     read_by: ['201', '401'],
     reactions: { '❤️': ['3'], '🔥': ['2', '9'] },
@@ -147,7 +154,8 @@ const jojoMessages: Message[] = [
     _id: '3',
     chat_id: '101',
     sender_id: '3',
-    content: "Your next line is: \"Wow, this app actually uses AES-256-GCM and I can't read anyone else's messages!\"",
+    content:
+      'Your next line is: "Wow, this app actually uses AES-256-GCM and I can\'t read anyone else\'s messages!"',
     edited: false,
     read_by: ['201', '301'],
     reactions: { '👍': ['3'], '🎉': ['2'] },
@@ -162,7 +170,8 @@ const jojoMessages: Message[] = [
     _id: '4',
     chat_id: '101',
     sender_id: '4',
-    content: 'Yare yare daze... the public key verification failed again. I told you to use RSA-OAEP.',
+    content:
+      'Yare yare daze... the public key verification failed again. I told you to use RSA-OAEP.',
     edited: false,
     read_by: ['1'],
     reactions: {},
@@ -177,7 +186,8 @@ const jojoMessages: Message[] = [
     _id: '5',
     chat_id: '101',
     sender_id: '5',
-    content: "My name is Yoshikage Kira. My key pair is 4096-bit RSA, and I just want to live a quiet, encrypted life. Killer Queen has already touched that plaintext.",
+    content:
+      'My name is Yoshikage Kira. My key pair is 4096-bit RSA, and I just want to live a quiet, encrypted life. Killer Queen has already touched that plaintext.',
     edited: false,
     read_by: ['1', '2'],
     reactions: { '💀': ['1', '2', '3'] },
@@ -192,7 +202,8 @@ const jojoMessages: Message[] = [
     _id: '6',
     chat_id: '101',
     sender_id: '6',
-    content: 'I, Giorno Giovanna, have a dream — and that dream is perfect forward secrecy. Every session key will be ephemeral.',
+    content:
+      'I, Giorno Giovanna, have a dream — and that dream is perfect forward secrecy. Every session key will be ephemeral.',
     edited: false,
     read_by: ['1'],
     reactions: { '✨': ['4', '7'] },
@@ -207,7 +218,8 @@ const jojoMessages: Message[] = [
     _id: '7',
     chat_id: '101',
     sender_id: '7',
-    content: 'Are you approaching me? Then come closer — I will verify your identity with ECDSA before you get here.',
+    content:
+      'Are you approaching me? Then come closer — I will verify your identity with ECDSA before you get here.',
     edited: false,
     read_by: ['6'],
     reactions: { '🤝': ['6'] },
@@ -222,7 +234,8 @@ const jojoMessages: Message[] = [
     _id: '8',
     chat_id: '101',
     sender_id: '8',
-    content: "I erased the plaintext with THE HAND. It's gone. No trace in memory. Simple.",
+    content:
+      "I erased the plaintext with THE HAND. It's gone. No trace in memory. Simple.",
     edited: false,
     read_by: ['7'],
     reactions: { '👋': ['3', '2'] },
@@ -237,7 +250,8 @@ const jojoMessages: Message[] = [
     _id: '9',
     chat_id: '101',
     sender_id: '1',
-    content: 'ZA WARUDO! Time stops... but end-to-end encryption never does. This message will self-destruct in 5 minutes.',
+    content:
+      'ZA WARUDO! Time stops... but end-to-end encryption never does. This message will self-destruct in 5 minutes.',
     edited: false,
     read_by: [],
     reactions: {},
@@ -253,7 +267,8 @@ const jojoMessages: Message[] = [
     _id: '10',
     chat_id: '101',
     sender_id: '4',
-    content: "Good grief... he set a disappearing timer. I'll read it before time resumes.",
+    content:
+      "Good grief... he set a disappearing timer. I'll read it before time resumes.",
     edited: false,
     read_by: ['1'],
     reactions: { '😤': ['1'] },
