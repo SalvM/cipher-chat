@@ -11,6 +11,7 @@ export interface DialogProps {
   description?: string;
   children: ReactNode;
   className?: string;
+  glow?: boolean;
 }
 
 export function Dialog({
@@ -21,6 +22,7 @@ export function Dialog({
   description,
   children,
   className,
+  glow = false,
 }: DialogProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -31,7 +33,7 @@ export function Dialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm',
+            'fixed inset-0 z-50 bg-base/70 backdrop-blur-md',
             'animate-in fade-in-0',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0'
           )}
@@ -40,15 +42,17 @@ export function Dialog({
         <DialogPrimitive.Content
           className={cn(
             'fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2',
-            'rounded-lg border border-border bg-elevated p-6 shadow-xl',
+            'rounded-xl border border-border-strong bg-elevated/95 backdrop-blur-xl p-6',
+            'shadow-xl',
+            glow && 'shadow-(--glow-primary)',
             'animate-in fade-in-0 zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
             className
           )}
         >
-          <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="mb-5 flex items-start justify-between gap-4">
             <div>
-              <DialogPrimitive.Title className="bg-base font-semibold text-primary">
+              <DialogPrimitive.Title className="text-sm font-semibold text-text-primary">
                 {title}
               </DialogPrimitive.Title>
               {description && (
@@ -59,10 +63,10 @@ export function Dialog({
             </div>
 
             <DialogPrimitive.Close
-              className="rounded-md p-1 text-text-muted hover:bg-ghost-hover hover:text-ghost-fg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="rounded-md p-1 text-text-muted hover:bg-ghost-hover hover:text-ghost-fg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 transition-colors"
               aria-label="Close"
             >
-              <XIcon size={24} />
+              <XIcon size={18} />
             </DialogPrimitive.Close>
           </div>
 

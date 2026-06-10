@@ -4,10 +4,10 @@ import { cn } from '@/utils';
 
 export const inputVariants = cva(
   [
-    'w-full rounded-md border bg-elevated px-3 font-sans text-text-primary',
+    'w-full rounded-md border bg-elevated/80 px-3 font-sans text-text-primary',
     'placeholder:text-text-muted',
-    'transition-colors duration-150',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+    'transition-all duration-150',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/60',
     'disabled:pointer-events-none disabled:opacity-40',
   ],
   {
@@ -19,7 +19,7 @@ export const inputVariants = cva(
       },
       state: {
         default: 'border-border hover:border-border-strong',
-        error: 'border-danger focus-visible:ring-danger',
+        error:   'border-danger/60 focus-visible:ring-danger/50 focus-visible:border-danger',
       },
     },
     defaultVariants: {
@@ -30,8 +30,7 @@ export const inputVariants = cva(
 );
 
 export interface InputProps
-  extends
-    Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
   containerClassName?: string | null;
   label?: string;
@@ -56,11 +55,11 @@ export function Input({
   const resolvedState = error ? 'error' : state;
 
   return (
-    <div className={cn('flex flex-col w-full', containerClassName ?? '')}>
+    <div className={cn('flex flex-col gap-1.5 w-full', containerClassName ?? '')}>
       {label && (
         <label
           htmlFor={inputId}
-          className="text-sm font-medium text-text-secondary"
+          className="text-xs font-medium text-text-secondary uppercase tracking-wide"
         >
           {label}
         </label>
