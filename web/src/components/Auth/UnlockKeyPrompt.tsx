@@ -19,13 +19,13 @@ export function UnlockKeyPrompt() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { unlockWithPassword } = useCryptoStore();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
 
   const handleUnlock = async () => {
     if (!password) return;
     setLoading(true);
     setError('');
-    const ok = await unlockWithPassword(password);
+    const ok = await unlockWithPassword(password, user?._id ?? '');
     setLoading(false);
     if (!ok) setError('Incorrect password');
   };
@@ -34,7 +34,9 @@ export function UnlockKeyPrompt() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-base px-4">
       <div className="flex w-full max-w-sm flex-col gap-6 rounded-lg border border-border bg-elevated p-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold text-text-primary">Unlock encryption keys</h1>
+          <h1 className="text-lg font-semibold text-text-primary">
+            Unlock encryption keys
+          </h1>
           <p className="text-sm text-text-secondary">
             Enter your password to decrypt your private key for this session.
           </p>
@@ -50,7 +52,11 @@ export function UnlockKeyPrompt() {
           autoFocus
         />
 
-        <Button intent="primary" disabled={loading || !password} onClick={handleUnlock}>
+        <Button
+          intent="primary"
+          disabled={loading || !password}
+          onClick={handleUnlock}
+        >
           {loading ? 'Unlocking…' : 'Unlock'}
         </Button>
 

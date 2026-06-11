@@ -82,8 +82,11 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
           const kp = await CryptoService.generateIdentityKeypair();
           const pub = await CryptoService.exportPublicKey(kp.publicKey);
           await api.put('/keys/identity', { body: { public_key: pub } });
-          const bundle = await CryptoService.encryptPrivateKey(kp.privateKey, password);
-          localStorage.setItem('privateKeyBundle', bundle);
+          const bundle = await CryptoService.encryptPrivateKey(
+            kp.privateKey,
+            password
+          );
+          localStorage.setItem(`privateKeyBundle_${user._id}`, bundle);
           useCryptoStore.getState().setPrivateKey(kp.privateKey);
         } catch (e) {
           console.error('[register] crypto setup failed', e);
@@ -110,35 +113,40 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
           localStorage.setItem('token', token);
           const authUser = parseUserFromAPI(user);
           localStorage.setItem('user', JSON.stringify(authUser));
-          set({
-            token,
-            user: authUser,
-            isLoading: false,
-            isAuthenticated: true,
-          });
+          set({ token, user: authUser, isLoading: false });
 
-          const bundle = localStorage.getItem('privateKeyBundle');
+          const bundleKey = `privateKeyBundle_${authUser._id}`;
+          const bundle = localStorage.getItem(bundleKey);
           if (bundle) {
             try {
-              const pk = await CryptoService.decryptPrivateKey(bundle, password);
+              const pk = await CryptoService.decryptPrivateKey(
+                bundle,
+                password
+              );
               useCryptoStore.getState().setPrivateKey(pk);
             } catch {
-              console.error('[login] bundle decryption failed — key remains locked');
-              // AuthGuard will show UnlockKeyPrompt for manual retry
+              console.error(
+                '[login] bundle decryption failed — key remains locked'
+              );
             }
           } else {
-            // No bundle: new user or new device — generate fresh keypair
+            // No bundle for this user on this device — generate fresh keypair
             try {
               const kp = await CryptoService.generateIdentityKeypair();
               const pub = await CryptoService.exportPublicKey(kp.publicKey);
               await api.put('/keys/identity', { body: { public_key: pub } });
-              const nb = await CryptoService.encryptPrivateKey(kp.privateKey, password);
-              localStorage.setItem('privateKeyBundle', nb);
+              const nb = await CryptoService.encryptPrivateKey(
+                kp.privateKey,
+                password
+              );
+              localStorage.setItem(bundleKey, nb);
               useCryptoStore.getState().setPrivateKey(kp.privateKey);
             } catch (e) {
               console.error('[login] keypair generation failed', e);
             }
           }
+
+          set({ isAuthenticated: true });
         }
         return { success: true };
       } catch (error: any) {

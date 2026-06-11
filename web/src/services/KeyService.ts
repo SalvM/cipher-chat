@@ -49,7 +49,22 @@ class KeyService {
       );
       if (!res) throw Object.assign(new Error('empty response'), { status: 500 });
 
-      const rawCK = await CryptoService.rsaDecrypt(privateKey, res.encrypted_key);
+      let rawCK: ArrayBuffer;
+      try {
+        rawCK = await CryptoService.rsaDecrypt(privateKey, res.encrypted_key);
+      } catch {
+        // Decryption failed: server copy was encrypted for an old keypair.
+        // Request re-deposit from owner using our current public key.
+        const myUserId = useAuthStore.getState().user?._id;
+        if (myUserId) {
+          socketService.emit('key_deposit_requested', {
+            context_type: contextType,
+            context_id: contextId,
+            user_id: myUserId,
+          });
+        }
+        return null as unknown as CachedCK;
+      }
       const ck = await CryptoService.importConversationKey(rawCK);
       const entry: CachedCK = { key: ck, version: res.key_version };
       this.ckCache.set(k, entry);

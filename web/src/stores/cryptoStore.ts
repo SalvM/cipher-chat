@@ -6,7 +6,7 @@ interface CryptoState {
   isUnlocked: boolean;
   setPrivateKey: (key: CryptoKey) => void;
   clearPrivateKey: () => void;
-  unlockWithPassword: (password: string) => Promise<boolean>;
+  unlockWithPassword: (password: string, userId: string) => Promise<boolean>;
 }
 
 /**
@@ -26,8 +26,8 @@ export const useCryptoStore = create<CryptoState>((set) => ({
   setPrivateKey: (key) => set({ privateKey: key, isUnlocked: true }),
   clearPrivateKey: () => set({ privateKey: null, isUnlocked: false }),
 
-  unlockWithPassword: async (password: string) => {
-    const bundle = localStorage.getItem('privateKeyBundle');
+  unlockWithPassword: async (password: string, userId: string) => {
+    const bundle = localStorage.getItem(`privateKeyBundle_${userId}`);
     if (!bundle) return false;
     try {
       const pk = await CryptoService.decryptPrivateKey(bundle, password);
