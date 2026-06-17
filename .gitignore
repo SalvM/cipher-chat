@@ -27,3 +27,12 @@ Thumbs.db
 skills-lock.json
 .claude/
 CLAUDE.md
+
+# Graphify
+graphify-out
+
+# yaml
+pnpm-lock.yaml
+web/pnpm-lock.yaml
+web/pnpm-workspace.yaml
+server/pnpm-lock.yaml
